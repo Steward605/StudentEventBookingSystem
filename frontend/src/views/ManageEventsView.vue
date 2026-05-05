@@ -1,93 +1,231 @@
 <script>
-  import { computed, onMounted, ref } from 'vue';
-  import LoadingState from '@/components/LoadingState.vue';
-  import EmptyState from '@/components/EmptyState.vue';
-  import { useEventStore } from '@/stores/eventStore';
-  import { formatCurrency, formatDate } from '@/utils/formatters';
+import { computed, onMounted, reactive, ref } from 'vue';
+import LoadingState from '@/components/LoadingState.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import { useEventStore } from '@/stores/eventStore';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
-  export default {
-    components: {LoadingState, EmptyState},
-    setup() {
-      const eventStore = useEventStore();
-      const deletingId = ref(null);
-      const actionError = ref('');
-      const sortedEvents = computed(() => [...eventStore.events].sort((a, b) => `${a.event_date} ${a.start_time}`.localeCompare(`${b.event_date} ${b.start_time}`)));
-      onMounted(() => eventStore.fetchEvents());
-      async function deleteEvent(event) {
-        const confirmed = window.confirm(`Delete ${event.title}? This will also remove related bookings.`);
-        if (!confirmed) return;
-        deletingId.value = event.id;
-        actionError.value = '';
-        try {
-          await eventStore.deleteEvent(event.id);
-        } catch (err) {
-          actionError.value = err.message;
-        } finally {
-          deletingId.value = null;
-        }
-      }
+export default {
+  components: {LoadingState, EmptyState},
+  setup() {
+    const eventStore = useEventStore();
+    const deletingId = ref(null);
+    const pendingDelete = ref(null);
+    const actionError = ref('');
+    const filters = reactive({search: '', category: '', availability: 'all'});
 
-      return {eventStore, sortedEvents, deletingId, actionError, deleteEvent, formatCurrency, formatDate};
+    const filteredEvents = computed(() => {
+      const search = filters.search.trim().toLowerCase();
+
+      return [...eventStore.events]
+        .filter(event => {
+          const matchesSearch = !search || [event.title, event.location, event.city, event.category].filter(Boolean).some(value => String(value).toLowerCase().includes(search));
+          const matchesCategory = !filters.category || event.category === filters.category;
+          const seatsLeft = Number(event.seats_left ?? 0);
+          const matchesAvailability = filters.availability === 'all' || (filters.availability === 'available' && seatsLeft > 0) || (filters.availability === 'soldOut' && seatsLeft <= 0);
+          return matchesSearch && matchesCategory && matchesAvailability;
+        })
+        .sort((a, b) => `${a.event_date} ${a.start_time}`.localeCompare(`${b.event_date} ${b.start_time}`));
+    });
+
+    const summaryCards = computed(() => {
+      const events = eventStore.events;
+      const available = events.filter(event => Number(event.seats_left ?? 0) > 0).length;
+      const soldOut = events.filter(event => Number(event.seats_left ?? 0) <= 0).length;
+
+      return [
+        {label: 'Total events', value: events.length},
+        {label: 'Available', value: available},
+        {label: 'Sold out', value: soldOut},
+        {label: 'Categories', value: eventStore.categories.length}
+      ];
+    });
+
+    const hasActiveFilters = computed(() => Boolean(filters.search || filters.category || filters.availability !== 'all'));
+
+    function seatStatusClass(event) {
+      const seatsLeft = Number(event.seats_left ?? 0);
+      if (seatsLeft <= 0) return 'seat-status-danger';
+      if (seatsLeft < 20) return 'seat-status-warning';
+      return 'seat-status-success';
     }
-  };
+
+    function seatStatusLabel(event) {
+      const seatsLeft = Number(event.seats_left ?? 0);
+      if (seatsLeft <= 0) return 'Sold out';
+      return `${seatsLeft} left`;
+    }
+
+    function clearFilters() {
+      filters.search = '';
+      filters.category = '';
+      filters.availability = 'all';
+    }
+
+    function requestDelete(event) {
+      pendingDelete.value = event;
+      actionError.value = '';
+    }
+
+    function closeDeleteDialog() {
+      if (deletingId.value) return;
+      pendingDelete.value = null;
+      actionError.value = '';
+    }
+
+    async function confirmDeleteEvent() {
+      if (!pendingDelete.value) return;
+
+      deletingId.value = pendingDelete.value.id;
+      actionError.value = '';
+
+      try {
+        await eventStore.deleteEvent(pendingDelete.value.id);
+        pendingDelete.value = null;
+      } catch (err) {
+        actionError.value = err.message;
+      } finally {
+        deletingId.value = null;
+      }
+    }
+
+    onMounted(() => eventStore.fetchEvents());
+
+    return {eventStore, filters, filteredEvents, summaryCards, hasActiveFilters, deletingId, pendingDelete, actionError, seatStatusClass, seatStatusLabel, clearFilters, requestDelete, closeDeleteDialog, confirmDeleteEvent, formatCurrency, formatDate};
+  }
+};
 </script>
 
 <template>
   <div class="container section-pad app-shell">
-    <div class="row align-items-end mb-4">
-      <div class="col-lg-8">
+    <header class="admin-management-header mb-4">
+      <div>
         <p class="text-primary fw-semibold mb-2">Admin</p>
-        <h1 class="display-6 fw-bold">Manage events</h1>
-        <p class="text-muted mb-0">Edit, delete, or preview events that appear in the student catalogue.</p>
+        <h1 class="display-6 fw-bold mb-2">Manage events</h1>
+        <p class="text-muted mb-0">Edit, delete, filter, or preview events shown in the student catalogue.</p>
       </div>
-      <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-        <RouterLink class="btn btn-primary" to="/admin/events/create">Create event</RouterLink>
+
+      <div class="admin-page-actions">
+        <RouterLink class="btn btn-primary btn-pill btn-hover-elevate" to="/admin/events/create">Create event</RouterLink>
+        <RouterLink class="btn btn-outline-primary btn-pill" to="/events">Preview catalogue</RouterLink>
       </div>
-    </div>
+    </header>
 
     <LoadingState v-if="eventStore.loading" />
+
     <div v-else-if="eventStore.error" class="alert alert-danger" role="alert">{{ eventStore.error }}</div>
+
     <div v-else>
-      <div v-if="actionError" class="alert alert-danger" role="alert">{{ actionError }}</div>
-      <EmptyState v-if="sortedEvents.length === 0" title="No events found" message="Create the first event for the platform." />
-      <div v-else class="card card-lift bg-white p-3 p-md-4">
-        <div class="table-responsive">
-          <table class="table align-middle mb-0">
-            <caption class="visually-hidden">Admin event management table</caption>
-            <thead>
-              <tr>
-                <th scope="col">Event</th>
-                <th scope="col">Date</th>
-                <th scope="col">Category</th>
-                <th scope="col">Seats left</th>
-                <th scope="col">Price</th>
-                <th scope="col" class="text-end">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="event in sortedEvents" :key="event.id">
-                <td>
-                  <p class="fw-semibold mb-1">{{ event.title }}</p>
-                  <p class="small text-muted mb-0">{{ event.location }}, {{ event.city }}</p>
-                </td>
-                <td>{{ formatDate(event.event_date) }}</td>
-                <td><span class="badge badge-soft rounded-pill">{{ event.category }}</span></td>
-                <td>{{ event.seats_left }} / {{ event.capacity }}</td>
-                <td>{{ formatCurrency(event.price) }}</td>
-                <td class="text-end">
-                  <div class="btn-group btn-group-sm" role="group" :aria-label="`Actions for ${event.title}`">
-                    <RouterLink class="btn btn-outline-secondary" :to="`/events/${event.id}`">Preview</RouterLink>
-                    <RouterLink class="btn btn-outline-primary" :to="`/admin/events/${event.id}/edit`">Edit</RouterLink>
-                    <button class="btn btn-outline-danger" type="button" :disabled="deletingId === event.id" @click="deleteEvent(event)">
-                      {{ deletingId === event.id ? 'Deleting...' : 'Delete' }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div v-if="actionError && !pendingDelete" class="alert alert-danger" role="alert">{{ actionError }}</div>
+
+      <section class="admin-summary-grid mb-4" aria-label="Event management summary">
+        <article v-for="card in summaryCards" :key="card.label" class="admin-summary-card">
+          <span>{{ card.label }}</span>
+          <strong>{{ card.value }}</strong>
+        </article>
+      </section>
+
+      <section class="admin-filter-panel glass-panel mb-4" aria-labelledby="event-admin-filter-title">
+        <div class="admin-filter-header">
+          <div>
+            <h2 id="event-admin-filter-title" class="h5 fw-bold mb-1">Filter events</h2>
+            <p class="text-muted small mb-0">Search by event name, venue, city, or category.</p>
+          </div>
+          <button v-if="hasActiveFilters" class="btn btn-outline-primary btn-sm btn-pill" type="button" @click="clearFilters">Clear filters</button>
         </div>
-      </div>
+
+        <div class="row g-3 align-items-end">
+          <div class="col-lg-5">
+            <label for="eventAdminSearch" class="form-label">Search events</label>
+            <input id="eventAdminSearch" v-model.trim="filters.search" class="form-control" type="search" placeholder="Search events..." autocomplete="off" />
+          </div>
+
+          <div class="col-md-6 col-lg-4">
+            <label for="eventAdminCategory" class="form-label">Category</label>
+            <select id="eventAdminCategory" v-model="filters.category" class="form-select">
+              <option value="">All categories</option>
+              <option v-for="category in eventStore.categories" :key="category" :value="category">{{ category }}</option>
+            </select>
+          </div>
+
+          <div class="col-md-6 col-lg-3">
+            <label for="eventAdminAvailability" class="form-label">Availability</label>
+            <select id="eventAdminAvailability" v-model="filters.availability" class="form-select">
+              <option value="all">All availability</option>
+              <option value="available">Available</option>
+              <option value="soldOut">Sold out</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <EmptyState v-if="eventStore.events.length === 0" title="No events found" message="Create the first event for the platform." />
+
+      <EmptyState v-else-if="filteredEvents.length === 0" title="No matching events" message="Try another search term or change the filters." />
+
+      <section v-else class="admin-management-list" aria-labelledby="event-admin-results-title">
+        <div class="admin-results-heading">
+          <h2 id="event-admin-results-title" class="h4 fw-bold mb-0">Event records</h2>
+          <p class="text-muted mb-0">{{ filteredEvents.length }} {{ filteredEvents.length === 1 ? 'event' : 'events' }} shown</p>
+        </div>
+
+        <article v-for="event in filteredEvents" :key="event.id" class="admin-record-card">
+          <div class="admin-record-main">
+            <div class="admin-record-title-row">
+              <span :class="['seat-status', seatStatusClass(event)]">{{ seatStatusLabel(event) }}</span>
+              <h3 class="h4 fw-bold mb-0">{{ event.title }}</h3>
+            </div>
+
+            <dl class="admin-record-meta">
+              <div>
+                <dt>Date</dt>
+                <dd>{{ formatDate(event.event_date) }}</dd>
+              </div>
+              <div>
+                <dt>Location</dt>
+                <dd>{{ event.location }}, {{ event.city }}</dd>
+              </div>
+              <div>
+                <dt>Category</dt>
+                <dd>{{ event.category }}</dd>
+              </div>
+              <div>
+                <dt>Capacity</dt>
+                <dd>{{ event.seats_left }} / {{ event.capacity }}</dd>
+              </div>
+              <div>
+                <dt>Price</dt>
+                <dd>{{ formatCurrency(event.price) }}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="admin-record-actions">
+            <RouterLink class="btn btn-outline-secondary btn-sm btn-pill" :to="`/events/${event.id}`">Preview</RouterLink>
+            <RouterLink class="btn btn-outline-primary btn-sm btn-pill" :to="`/admin/events/${event.id}/edit`">Edit</RouterLink>
+            <button class="btn btn-outline-danger btn-sm btn-pill" type="button" :disabled="deletingId === event.id" @click="requestDelete(event)">
+              {{ deletingId === event.id ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <div v-if="pendingDelete" class="admin-confirm-backdrop" role="presentation" @click.self="closeDeleteDialog">
+      <section class="admin-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-event-title" aria-describedby="delete-event-description">
+        <p class="text-danger fw-semibold mb-2">Delete event</p>
+        <h2 id="delete-event-title" class="h4 fw-bold mb-2">Delete this event?</h2>
+        <p id="delete-event-description" class="text-muted mb-3">This will remove <strong>{{ pendingDelete.title }}</strong> and may also affect related bookings.</p>
+
+        <div v-if="actionError" class="alert alert-danger" role="alert">{{ actionError }}</div>
+
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
+          <button class="btn btn-outline-primary btn-pill" type="button" :disabled="Boolean(deletingId)" @click="closeDeleteDialog">Keep event</button>
+          <button class="btn btn-danger btn-pill" type="button" :disabled="Boolean(deletingId)" @click="confirmDeleteEvent">
+            {{ deletingId ? 'Deleting...' : 'Yes, delete it' }}
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 </template>

@@ -1,38 +1,52 @@
 <script>
-  import { computed } from 'vue';
-  import { formatCurrency, formatDate } from '@/utils/formatters';
-  export default {
-    props: {
-      event: { type: Object, required: true },
-      tickets: { type: Number, default: 1 }
-    },
-    setup(props) {
-      const total = computed(() => Number(props.event.price || 0) * props.tickets);
-      return {
-        total,
-        formatCurrency,
-        formatDate
-      };
-    }
-  };
+import { computed } from 'vue';
+import { formatCurrency, formatDate, formatTimeRange } from '@/utils/formatters';
+
+export default {
+  props: {
+    event: {type: Object, required: true},
+    tickets: {type: Number, default: 1}
+  },
+  setup(props) {
+    const safeTickets = computed(() => Math.max(1, Number(props.tickets) || 1));
+    const total = computed(() => Number(props.event.price || 0) * safeTickets.value);
+    const locationLabel = computed(() => [props.event.location, props.event.city].filter(Boolean).join(', ') || 'Location to be confirmed');
+
+    return {safeTickets, total, locationLabel, formatCurrency, formatDate, formatTimeRange};
+  }
+};
 </script>
 
 <template>
-  <aside class="card card-lift p-4" aria-labelledby="booking-summary-title">
-    <h2 id="booking-summary-title" class="h5">Booking summary</h2>
-    <p class="mb-1 fw-semibold">{{ event.title }}</p>
-    <p class="text-muted small mb-3">{{ formatDate(event.event_date) }} at {{ event.start_time }}</p>
-    <div class="d-flex justify-content-between border-top pt-3">
-      <span>Tickets</span>
-      <strong>{{ tickets }}</strong>
+  <aside class="booking-summary" aria-labelledby="booking-summary-title">
+    <p class="text-primary fw-semibold mb-2">Review</p>
+    <h2 id="booking-summary-title" class="h4 fw-bold mb-3">Booking summary</h2>
+
+    <div class="summary-event">
+      <p class="fw-bold mb-1">{{ event.title }}</p>
+      <p class="text-muted small mb-0">{{ formatDate(event.event_date) }} · {{ formatTimeRange(event.start_time, event.end_time) }}</p>
+      <p class="text-muted small mb-0">{{ locationLabel }}</p>
     </div>
-    <div class="d-flex justify-content-between mt-2">
-      <span>Price each</span>
-      <strong>{{ formatCurrency(event.price) }}</strong>
-    </div>
-    <div class="d-flex justify-content-between mt-3 fs-5">
-      <span>Total</span>
-      <strong>{{ formatCurrency(total) }}</strong>
-    </div>
+
+    <dl class="summary-list">
+      <div class="summary-row">
+        <dt>Tickets</dt>
+        <dd>{{ safeTickets }}</dd>
+      </div>
+      <div class="summary-row">
+        <dt>Price each</dt>
+        <dd>{{ formatCurrency(event.price) }}</dd>
+      </div>
+      <div class="summary-row">
+        <dt>Seats left</dt>
+        <dd>{{ event.seats_left }}</dd>
+      </div>
+      <div class="summary-row summary-total">
+        <dt>Total</dt>
+        <dd>{{ formatCurrency(total) }}</dd>
+      </div>
+    </dl>
+
+    <p class="summary-note mb-0">You can review all confirmed bookings from the history page after submission.</p>
   </aside>
 </template>
