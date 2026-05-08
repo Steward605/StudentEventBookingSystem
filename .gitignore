@@ -5,3 +5,8 @@ dist/
 backend/data/*.sqlite
 backend/data/*.sqlite-journal
 .DS_Store
+
+# SQLite database files
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
