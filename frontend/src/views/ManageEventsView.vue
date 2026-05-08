@@ -1,43 +1,66 @@
 <script>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import Paginate from 'vuejs-paginate-next';
 import LoadingState from '@/components/LoadingState.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { useEventStore } from '@/stores/eventStore';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 export default {
-  components: {LoadingState, EmptyState},
+  components: {LoadingState, EmptyState, paginate: Paginate},
   setup() {
     const eventStore = useEventStore();
     const deletingId = ref(null);
     const pendingDelete = ref(null);
     const actionError = ref('');
     const filters = reactive({search: '', category: '', availability: 'all'});
+    const currentPage = ref(1);
+    const perPage = 10;
+    let debounceTimer;
 
-    const filteredEvents = computed(() => {
-      const search = filters.search.trim().toLowerCase();
+    const filteredEvents = computed(() => eventStore.events);
 
-      return [...eventStore.events]
-        .filter(event => {
-          const matchesSearch = !search || [event.title, event.location, event.city, event.category].filter(Boolean).some(value => String(value).toLowerCase().includes(search));
-          const matchesCategory = !filters.category || event.category === filters.category;
-          const seatsLeft = Number(event.seats_left ?? 0);
-          const matchesAvailability = filters.availability === 'all' || (filters.availability === 'available' && seatsLeft > 0) || (filters.availability === 'soldOut' && seatsLeft <= 0);
-          return matchesSearch && matchesCategory && matchesAvailability;
-        })
-        .sort((a, b) => `${a.event_date} ${a.start_time}`.localeCompare(`${b.event_date} ${b.start_time}`));
+    const resultLabel = computed(() => {
+      const totalItems = eventStore.pagination?.totalItems ?? filteredEvents.value.length;
+      return `${totalItems} ${totalItems === 1 ? 'event' : 'events'} shown`;
     });
 
-    const summaryCards = computed(() => {
-      const events = eventStore.events;
-      const available = events.filter(event => Number(event.seats_left ?? 0) > 0).length;
-      const soldOut = events.filter(event => Number(event.seats_left ?? 0) <= 0).length;
+    function buildAdminParams(page = 1) {
+      return {
+        ...(filters.search ? { search: filters.search } : {}),
+        ...(filters.category ? { category: filters.category } : {}),
+        ...(filters.availability !== 'all' ? { availability: filters.availability } : {}),
+        page,
+        limit: perPage
+      };
+    }
 
+    function fetchAdminEvents(page = 1) {
+      currentPage.value = page;
+      return eventStore.fetchEvents(buildAdminParams(page));
+    }
+
+    function applyFilters() {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(() => {
+        fetchAdminEvents(1);
+      }, 250);
+    }
+
+    function goToPage(pageNum) {
+      const totalPages = eventStore.pagination?.totalPages || 1;
+      if (pageNum < 1 || pageNum > totalPages || pageNum === eventStore.pagination.page) {
+        return;
+      }
+      fetchAdminEvents(pageNum);
+    }
+
+    const summaryCards = computed(() => {
       return [
-        {label: 'Total events', value: events.length},
-        {label: 'Available', value: available},
-        {label: 'Sold out', value: soldOut},
-        {label: 'Categories', value: eventStore.categories.length}
+        { label: 'Total events', value: eventStore.summary?.totalEvents ?? eventStore.pagination?.totalItems ?? 0 },
+        { label: 'Available', value: eventStore.summary?.availableEvents ?? 0 },
+        { label: 'Sold out', value: eventStore.summary?.soldOutEvents ?? 0 },
+        { label: 'Categories', value: eventStore.summary?.totalCategories ?? eventStore.categories.length }
       ];
     });
 
@@ -60,6 +83,7 @@ export default {
       filters.search = '';
       filters.category = '';
       filters.availability = 'all';
+      fetchAdminEvents(1);
     }
 
     function requestDelete(event) {
@@ -75,10 +99,8 @@ export default {
 
     async function confirmDeleteEvent() {
       if (!pendingDelete.value) return;
-
       deletingId.value = pendingDelete.value.id;
       actionError.value = '';
-
       try {
         await eventStore.deleteEvent(pendingDelete.value.id);
         pendingDelete.value = null;
@@ -89,9 +111,15 @@ export default {
       }
     }
 
-    onMounted(() => eventStore.fetchEvents());
+    watch(filters, applyFilters);
 
-    return {eventStore, filters, filteredEvents, summaryCards, hasActiveFilters, deletingId, pendingDelete, actionError, seatStatusClass, seatStatusLabel, clearFilters, requestDelete, closeDeleteDialog, confirmDeleteEvent, formatCurrency, formatDate};
+    onMounted(() => fetchAdminEvents(1));
+
+    onBeforeUnmount(() => {
+      window.clearTimeout(debounceTimer);
+    });
+
+    return {eventStore, filters, filteredEvents, summaryCards, hasActiveFilters, currentPage, resultLabel, deletingId, pendingDelete, actionError, seatStatusClass, seatStatusLabel, clearFilters, goToPage, requestDelete, closeDeleteDialog, confirmDeleteEvent, formatCurrency, formatDate};
   }
 };
 </script>
@@ -166,7 +194,7 @@ export default {
       <section v-else class="admin-management-list" aria-labelledby="event-admin-results-title">
         <div class="admin-results-heading">
           <h2 id="event-admin-results-title" class="h4 fw-bold mb-0">Event records</h2>
-          <p class="text-muted mb-0">{{ filteredEvents.length }} {{ filteredEvents.length === 1 ? 'event' : 'events' }} shown</p>
+          <p class="text-muted mb-0">{{ resultLabel }}</p>
         </div>
 
         <article v-for="event in filteredEvents" :key="event.id" class="admin-record-card">
@@ -208,6 +236,9 @@ export default {
             </button>
           </div>
         </article>
+        <div v-if="eventStore.pagination?.totalPages > 1" class="d-flex justify-content-center mt-4">
+          <paginate v-model="currentPage" :page-count="eventStore.pagination.totalPages" :page-range="3" :margin-pages="1" :click-handler="goToPage" :prev-text="'Previous'" :next-text="'Next'" :container-class="'pagination flex-wrap justify-content-center mb-0'" :page-class="'page-item'" :page-link-class="'page-link'" :prev-class="'page-item'" :prev-link-class="'page-link'" :next-class="'page-item'" :next-link-class="'page-link'" :break-view-class="'page-item disabled'" :break-view-link-class="'page-link'"/>
+        </div>
       </section>
     </div>
 

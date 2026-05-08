@@ -9,35 +9,123 @@ router.get('/', (req, res) => {
   const search = req.query.search?.trim().toLowerCase() || '';
   const category = req.query.category?.trim() || '';
   const freeOnly = req.query.freeOnly === 'true';
-  let query = `
-    SELECT e.*, 
-      COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.ticket_count ELSE 0 END), 0) AS booked_tickets,
-      e.capacity - COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.ticket_count ELSE 0 END), 0) AS seats_left
+
+  const allowedAvailabilityFilters = ['available', 'soldOut'];
+  const availability = allowedAvailabilityFilters.includes(req.query.availability)
+    ? req.query.availability
+    : 'all';
+
+  function parsePositiveInteger(value, fallback) {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  const page = parsePositiveInteger(req.query.page, 1);
+  const limit = Math.min(parsePositiveInteger(req.query.limit, 12), 48);
+  const offset = (page - 1) * limit;
+
+  const bookedTicketsSql = `COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.ticket_count ELSE 0 END), 0)`;
+  const seatsLeftSql = `e.capacity - ${bookedTicketsSql}`;
+
+  let fromWhereSql = `
     FROM events e
     LEFT JOIN bookings b ON b.event_id = e.id
     WHERE 1=1
   `;
+
   const params = [];
 
   if (category) {
-    query += ` AND e.category = ?`;
+    fromWhereSql += ` AND e.category = ?`;
     params.push(category);
   }
+
   if (freeOnly) {
-    query += ` AND e.price = 0`;
+    fromWhereSql += ` AND e.price = 0`;
   }
+
   if (search) {
-    query += ` AND (LOWER(e.title) LIKE ? OR LOWER(e.description) LIKE ? OR LOWER(e.location) LIKE ? OR LOWER(e.city) LIKE ?)`;
+    fromWhereSql += `
+      AND (
+        LOWER(e.title) LIKE ?
+        OR LOWER(e.description) LIKE ?
+        OR LOWER(e.location) LIKE ?
+        OR LOWER(e.city) LIKE ?
+      )
+    `;
+
     const wildcardSearch = `%${search}%`;
     params.push(wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch);
   }
-  query += ` GROUP BY e.id ORDER BY e.event_date ASC, e.start_time ASC`;
 
-  const events = db.prepare(query).all(...params);
+  const groupBySql = ` GROUP BY e.id`;
+
+  let havingSql = '';
+
+  if (availability === 'available') {
+    havingSql = ` HAVING ${seatsLeftSql} > 0`;
+  }
+
+  if (availability === 'soldOut') {
+    havingSql = ` HAVING ${seatsLeftSql} <= 0`;
+  }
+
+  const totalItems = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM (
+      SELECT e.id
+      ${fromWhereSql}
+      ${groupBySql}
+      ${havingSql}
+    ) AS filtered_events
+  `).get(...params).count;
+
+  const events = db.prepare(`
+    SELECT
+      e.*,
+      ${bookedTicketsSql} AS booked_tickets,
+      ${seatsLeftSql} AS seats_left
+    ${fromWhereSql}
+    ${groupBySql}
+    ${havingSql}
+    ORDER BY e.event_date ASC, e.start_time ASC
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+
   const categoryRows = db.prepare('SELECT DISTINCT category FROM events ORDER BY category').all();
   const categories = categoryRows.map(row => row.category);
 
-  res.json({ events, categories });
+  const summary = db.prepare(`
+    SELECT
+      COUNT(*) AS totalEvents,
+      COALESCE(SUM(CASE WHEN seats_left > 0 THEN 1 ELSE 0 END), 0) AS availableEvents,
+      COALESCE(SUM(CASE WHEN seats_left <= 0 THEN 1 ELSE 0 END), 0) AS soldOutEvents
+    FROM (
+      SELECT
+        e.id,
+        e.capacity - COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.ticket_count ELSE 0 END), 0) AS seats_left
+      FROM events e
+      LEFT JOIN bookings b ON b.event_id = e.id
+      GROUP BY e.id
+    ) AS event_capacity_summary
+  `).get();
+
+  res.json({
+    events,
+    categories,
+    summary: {
+      totalEvents: summary.totalEvents,
+      availableEvents: summary.availableEvents,
+      soldOutEvents: summary.soldOutEvents,
+      totalCategories: categories.length
+    },
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.max(Math.ceil(totalItems / limit), 1)
+    }
+  });
 });
 
 router.get('/:id', (req, res) => {

@@ -1,50 +1,99 @@
 <script>
-import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import Paginate from 'vuejs-paginate-next';
 import EventCard from '@/components/EventCard.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { useEventStore } from '@/stores/eventStore';
 
 export default {
-  components: {EventCard, LoadingState, EmptyState},
+  components: {
+    EventCard,
+    LoadingState,
+    EmptyState,
+    paginate: Paginate
+  },
+
   setup() {
     const eventStore = useEventStore();
-    const filters = reactive({search: '', category: '', freeOnly: false});
+
+    const filters = reactive({
+      search: '',
+      category: '',
+      freeOnly: false
+    });
+
+    const currentPage = ref(1);
+    const perPage = 12;
     let debounceTimer;
 
     const hasActiveFilters = computed(() => Boolean(filters.search || filters.category || filters.freeOnly));
-    const resultCount = computed(() => eventStore.events.length);
-    const resultLabel = computed(() => `${resultCount.value} ${resultCount.value === 1 ? 'event' : 'events'} found`);
 
-    function buildParams() {
+    const resultCount = computed(() => eventStore.pagination.totalItems ?? eventStore.events.length);
+
+    const resultLabel = computed(() => {
+      const count = resultCount.value;
+      return `${count} ${count === 1 ? 'event' : 'events'} found`;
+    });
+
+    const paginationLabel = computed(() => {
+      const { page, limit, totalItems } = eventStore.pagination;
+
+      if (!totalItems) {
+        return 'No events found';
+      }
+
+      const start = (page - 1) * limit + 1;
+      const end = Math.min(page * limit, totalItems);
+
+      return `Showing ${start}-${end} of ${totalItems} events`;
+    });
+
+    function buildParams(page = 1) {
       return {
-        ...(filters.search ? {search: filters.search} : {}),
-        ...(filters.category ? {category: filters.category} : {}),
-        ...(filters.freeOnly ? {freeOnly: true} : {})
+        ...(filters.search ? { search: filters.search } : {}),
+        ...(filters.category ? { category: filters.category } : {}),
+        ...(filters.freeOnly ? { freeOnly: true } : {}),
+        page,
+        limit: perPage
       };
+    }
+
+    function fetchPage(page = 1) {
+      currentPage.value = page;
+      return eventStore.fetchEvents(buildParams(page));
     }
 
     function applyFilters() {
       window.clearTimeout(debounceTimer);
-      debounceTimer = window.setTimeout(() => eventStore.fetchEvents(buildParams()), 250);
+
+      debounceTimer = window.setTimeout(() => {
+        fetchPage(1);
+      }, 250);
     }
 
     function clearFilters() {
       filters.search = '';
       filters.category = '';
       filters.freeOnly = false;
-      eventStore.fetchEvents();
+    }
+
+    function goToPage(pageNum) {
+      const totalPages = eventStore.pagination.totalPages || 1;
+      if (pageNum < 1 || pageNum > totalPages || pageNum === eventStore.pagination.page) {
+        return;
+      }
+      fetchPage(pageNum);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     watch(filters, applyFilters);
-
-    onMounted(() => eventStore.fetchEvents());
-
+    onMounted(() => fetchPage(1));
     onBeforeUnmount(() => {
       window.clearTimeout(debounceTimer);
     });
 
-    return {eventStore, filters, hasActiveFilters, resultLabel, clearFilters};
+    return {eventStore, filters, currentPage, hasActiveFilters, resultLabel, paginationLabel, clearFilters, goToPage};
   }
 };
 </script>
@@ -114,6 +163,12 @@ export default {
           <EventCard :event="event" />
         </div>
       </TransitionGroup>
+
+      <div v-if="eventStore.pagination.totalPages > 1" class="d-flex flex-column align-items-center gap-2 mt-5">
+        <p class="text-muted small mb-0" aria-live="polite">{{ paginationLabel }}</p>
+
+        <paginate v-model="currentPage" :page-count="eventStore.pagination.totalPages" :page-range="3" :margin-pages="1" :click-handler="goToPage" :prev-text="'Previous'" :next-text="'Next'" :container-class="'pagination flex-wrap justify-content-center mb-0'" :page-class="'page-item'" :page-link-class="'page-link'" :prev-class="'page-item'" :prev-link-class="'page-link'" :next-class="'page-item'" :next-link-class="'page-link'" :break-view-class="'page-item disabled'" :break-view-link-class="'page-link'"/>
+      </div>
     </section>
   </div>
 </template>

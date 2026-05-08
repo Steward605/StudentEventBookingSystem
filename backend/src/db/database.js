@@ -123,104 +123,163 @@ function seedEvents() {
     )
   `);
 
-  const events = [
-    {
-      title: 'Future Interfaces Showcase',
-      category: 'Design',
-      description: 'Students show interface prototypes and receive feedback from classmates and lecturers.',
-      location: 'Innovation Studio, Building A',
-      city: 'Kuching',
-      event_date: dateFromToday(7),
-      start_time: '10:00',
-      end_time: '13:00',
-      capacity: 120,
-      price: 0,
-      image_url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80',
-      organiser: 'School of ICT',
-      accessibility_notes: 'Wheelchair accessible venue, captioned presentation slides, quiet seating area available.',
-      created_by: admin?.id || null
-    },
-    {
-      title: 'Startup Pitch Night',
-      category: 'Entrepreneurship',
-      description: 'Student teams pitch early ideas and receive comments from mentors about the problem, target users, and presentation.',
-      location: 'Auditorium Hall 2',
-      city: 'Kuching',
-      event_date: dateFromToday(11),
-      start_time: '18:30',
-      end_time: '21:00',
-      capacity: 200,
-      price: 12,
-      image_url: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80',
-      organiser: 'Entrepreneurship Club',
-      accessibility_notes: 'Step-free entry and front-row priority seating on request.',
-      created_by: admin?.id || null
-    },
-    {
-      title: 'AI for Social Good Workshop',
-      category: 'Technology',
-      description: 'A practical workshop where students discuss ethical AI use, plan a simple dataset, and sketch a small prototype idea.',
-      location: 'Computer Lab 4',
-      city: 'Kuching',
-      event_date: dateFromToday(15),
-      start_time: '14:00',
-      end_time: '17:30',
-      capacity: 45,
-      price: 8,
-      image_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
-      organiser: 'ICT Society',
-      accessibility_notes: 'Lab machines include screen magnification settings; participants may bring personal laptops.',
-      created_by: admin?.id || null
-    },
-    {
-      title: 'Wellbeing Morning Run',
-      category: 'Wellbeing',
-      description: 'A relaxed campus run with warm-up guidance, water stations, and breakfast after the session.',
-      location: 'Campus Green Entrance',
-      city: 'Kuching',
-      event_date: dateFromToday(17),
-      start_time: '07:00',
-      end_time: '09:00',
-      capacity: 80,
-      price: 5,
-      image_url: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80',
-      organiser: 'Student Wellbeing Team',
-      accessibility_notes: 'Alternative walking route available; volunteers support participants with mobility needs.',
-      created_by: admin?.id || null
-    },
-    {
-      title: 'Cultural Food Festival',
-      category: 'Community',
-      description: 'A student event with food booths, performances, and cultural sharing from different societies.',
-      location: 'Central Courtyard',
-      city: 'Kuching',
-      event_date: dateFromToday(22),
-      start_time: '16:00',
-      end_time: '20:30',
-      capacity: 350,
-      price: 3,
-      image_url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80',
-      organiser: 'Student Council',
-      accessibility_notes: 'Food allergen cards are displayed at each booth; wide walkways are maintained.',
-      created_by: admin?.id || null
-    },
-    {
-      title: 'Portfolio Review Clinic',
-      category: 'Career',
-      description: 'Small-group portfolio review for students applying to design, software, and data roles.',
-      location: 'Career Hub',
-      city: 'Kuching',
-      event_date: dateFromToday(35),
-      start_time: '11:00',
-      end_time: '15:00',
-      capacity: 60,
-      price: 0,
-      image_url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80',
-      organiser: 'Career Services',
-      accessibility_notes: 'Digital portfolio reviews available for students who prefer online feedback.',
-      created_by: admin?.id || null
-    }
+  const categories = [
+    'Design',
+    'Technology',
+    'Career',
+    'Community',
+    'Wellbeing',
+    'Entrepreneurship',
+    'Academic',
+    'Sports'
   ];
+
+  const cities = [
+    'Kuching',
+    'Kuala Lumpur',
+    'Melbourne',
+    'Hawthorn',
+    'Sydney'
+  ];
+
+  const venues = [
+    'Innovation Studio',
+    'Main Auditorium',
+    'Computer Lab 4',
+    'Student Lounge',
+    'Campus Green',
+    'Career Hub',
+    'Seminar Room B',
+    'Central Courtyard'
+  ];
+
+  const organisers = [
+    'School of ICT',
+    'Student Council',
+    'Career Services',
+    'ICT Society',
+    'Entrepreneurship Club',
+    'Student Wellbeing Team'
+  ];
+
+  const categoryImagePools = {
+    Design: [
+      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Technology: [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Career: [
+      'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Community: [
+      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1529390079861-591de354faf5?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Wellbeing: [
+      'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Entrepreneurship: [
+      'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Academic: [
+      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=1200&q=80'
+    ],
+    Sports: [
+      'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1486286701208-1d58e9338013?auto=format&fit=crop&w=1200&q=80'
+    ]
+  };
+
+  const titleThemes = [
+    'Future Interfaces',
+    'Startup Pitch',
+    'AI for Social Good',
+    'Wellbeing Morning',
+    'Cultural Food',
+    'Portfolio Review',
+    'Student Innovation',
+    'Campus Connect',
+    'Leadership Lab',
+    'Career Booster',
+    'Creative Coding',
+    'Digital Futures',
+    'Industry Insights',
+    'Green Campus',
+    'Global Voices'
+  ];
+
+  const titleFormats = [
+    'Showcase',
+    'Workshop',
+    'Forum',
+    'Bootcamp',
+    'Meetup',
+    'Challenge',
+    'Festival',
+    'Clinic'
+  ];
+
+  const events = Array.from({ length: 120 }, (_, index) => {
+    const eventNumber = index + 1;
+    const category = categories[index % categories.length];
+    const city = cities[index % cities.length];
+    const venue = venues[index % venues.length];
+    const organiser = organisers[index % organisers.length];
+    const startHour = 8 + (index % 10);
+    const endHour = startHour + 2;
+    const theme = titleThemes[index % titleThemes.length];
+    const format = titleFormats[Math.floor(index / titleThemes.length) % titleFormats.length];
+    const imagePool = categoryImagePools[category] || categoryImagePools.Technology;
+    const imageUrl = imagePool[Math.floor(index / categories.length) % imagePool.length];
+
+    return {
+      title: `${theme} ${format}`,
+      category,
+      description: `A student event designed for testing event browsing, booking, filtering, and pagination. This is seeded event ${eventNumber}.`,
+      location: `${venue}, Room ${100 + eventNumber}`,
+      city,
+      event_date: dateFromToday(3 + index),
+      start_time: `${String(startHour).padStart(2, '0')}:00`,
+      end_time: `${String(endHour).padStart(2, '0')}:00`,
+      capacity: 40 + (index % 160),
+      price: index % 4 === 0 ? 0 : Number((5 + (index % 25)).toFixed(2)),
+      image_url: imageUrl,
+      organiser,
+      accessibility_notes: 'Wheelchair accessible venue. Contact organiser for additional accessibility support.',
+      created_by: admin?.id || null
+    };
+  });
 
   const transaction = db.transaction(items => items.forEach(event => insert.run(event)));
   transaction(events);
