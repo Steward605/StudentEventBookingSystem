@@ -31,7 +31,7 @@ const routes = [
   { path: '/admin/events/create', name: 'create-event', component: CreateEventView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/events/:id/edit', name: 'edit-event', component: EditEventView, props: true, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/bookings', name: 'admin-bookings', component: AdminBookingsView, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
+  { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
 ];
 

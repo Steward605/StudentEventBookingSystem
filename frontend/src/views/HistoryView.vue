@@ -1,61 +1,88 @@
 <script>
 import { computed, onMounted, ref } from 'vue';
-import StatCard from '@/components/StatCard.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import EmptyState from '@/components/EmptyState.vue';
-import { api } from '@/services/api';
-import { useAuthStore } from '@/stores/authStore';
 import { useBookingStore } from '@/stores/bookingStore';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 export default {
-  components: {StatCard, LoadingState, EmptyState},
+  components: {
+    LoadingState,
+    EmptyState
+  },
   setup() {
-    const auth = useAuthStore();
     const bookingStore = useBookingStore();
-    const stats = ref(null);
     const loading = ref(true);
     const error = ref('');
-
-    const confirmedBookings = computed(() => bookingStore.bookings.filter(booking => booking.status === 'confirmed'));
-
-    const upcomingBookings = computed(() => {
-      return [...confirmedBookings.value]
-        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
-        .slice(0, 3);
+    const activeStatus = ref('all');
+    const cancellingId = ref(null);
+    const statusFilters = [
+      { value: 'all', label: 'All bookings' },
+      { value: 'confirmed', label: 'Confirmed' },
+      { value: 'cancelled', label: 'Cancelled' }
+    ];
+    const sortedBookings = computed(() => {
+      return [...bookingStore.bookings].sort((a, b) => {
+        const dateA = new Date(`${a.event_date || ''} ${a.start_time || '00:00'}`);
+        const dateB = new Date(`${b.event_date || ''} ${b.start_time || '00:00'}`);
+        return dateB - dateA;
+      });
     });
+    const filteredBookings = computed(() => {
+      if (activeStatus.value === 'all') {
+        return sortedBookings.value;
+      }
 
-    const totalTickets = computed(() => confirmedBookings.value.reduce((sum, booking) => sum + Number(booking.ticket_count || 0), 0));
-
-    const statsCards = computed(() => [
-      {label: 'My bookings', value: stats.value?.myBookings ?? confirmedBookings.value.length, helper: 'Confirmed bookings'},
-      {label: 'My tickets', value: stats.value?.myTickets ?? totalTickets.value, helper: 'Total confirmed tickets'},
-      {label: 'Upcoming', value: stats.value?.upcomingEvents ?? upcomingBookings.value.length, helper: 'Future booked events'},
-      {label: 'Platform events', value: stats.value?.totalEvents ?? 0, helper: 'Available in catalogue'}
-    ]);
-
-    const accountRows = computed(() => [
-      {label: 'Email', value: auth.user?.email || 'Not provided'},
-      {label: 'Campus', value: auth.user?.campus || 'Not provided'},
-      {label: 'Role', value: auth.user?.role || 'student'}
+      return sortedBookings.value.filter(booking => booking.status === activeStatus.value);
+    });
+    const confirmedCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'confirmed').length);
+    const cancelledCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'cancelled').length);
+    const totalTickets = computed(() => {
+      return bookingStore.bookings
+        .filter(booking => booking.status === 'confirmed')
+        .reduce((sum, booking) => sum + Number(booking.ticket_count || 0), 0);
+    });
+    const summaryCards = computed(() => [
+      { label: 'Total records', value: bookingStore.bookings.length, helper: 'All booking attempts' },
+      { label: 'Confirmed', value: confirmedCount.value, helper: 'Active reservations' },
+      { label: 'Cancelled', value: cancelledCount.value, helper: 'Removed reservations' },
+      { label: 'Tickets held', value: totalTickets.value, helper: 'Confirmed tickets' }
     ]);
 
     function bookingTotal(booking) {
       return Number(booking.price || 0) * Number(booking.ticket_count || 0);
     }
-
     function eventRoute(booking) {
       return booking.event_id ? `/events/${booking.event_id}` : '/events';
+    }
+    function statusClass(status) {
+      if (status === 'confirmed') {
+        return 'text-bg-success';
+      }
+      if (status === 'cancelled') {
+        return 'text-bg-secondary';
+      }
+      return 'text-bg-light';
+    }
+
+    async function cancelBooking(booking) {
+      if (booking.status !== 'confirmed') {
+        return;
+      }
+      cancellingId.value = booking.id;
+      error.value = '';
+      try {
+        await bookingStore.cancelBooking(booking.id);
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        cancellingId.value = null;
+      }
     }
 
     onMounted(async () => {
       try {
-        const [statsData] = await Promise.all([
-          api.get('/stats/overview'),
-          bookingStore.fetchBookings()
-        ]);
-
-        stats.value = statsData.stats;
+        await bookingStore.fetchBookings();
       } catch (err) {
         error.value = err.message;
       } finally {
@@ -63,7 +90,7 @@ export default {
       }
     });
 
-    return {auth, statsCards, loading, error, upcomingBookings, accountRows, bookingTotal, eventRoute, formatCurrency, formatDate};
+    return {bookingStore, loading, error, activeStatus, statusFilters, filteredBookings, summaryCards, cancellingId, bookingTotal, eventRoute, statusClass, cancelBooking, formatCurrency, formatDate};
   }
 };
 </script>
@@ -73,83 +100,118 @@ export default {
     <LoadingState v-if="loading" />
 
     <div v-else>
-      <header class="dashboard-header mb-4">
+      <header class="history-header mb-4">
         <div>
-          <p class="text-primary fw-semibold mb-2">Dashboard</p>
-          <h1 class="display-6 fw-bold mb-2">Welcome, {{ auth.user?.name }}</h1>
-          <p class="text-muted mb-0">Track bookings, review your account details, and continue discovering campus events.</p>
+          <p class="text-primary fw-semibold mb-2">History</p>
+          <h1 class="display-6 fw-bold mb-2">Booking history</h1>
+          <p class="text-muted mb-0">Review confirmed and cancelled bookings without the dashboard summary layout.</p>
         </div>
 
-        <div class="dashboard-header-actions">
-          <RouterLink class="btn btn-primary btn-pill btn-hover-elevate" to="/events">Book another event</RouterLink>
-          <RouterLink class="btn btn-outline-primary btn-pill" to="/history">View history</RouterLink>
+        <div class="history-counts" aria-label="Booking history summary">
+          <span>{{ bookingStore.bookings.length }} records</span>
+          <span>{{ summaryCards[1].value }} confirmed</span>
+          <span>{{ summaryCards[2].value }} cancelled</span>
         </div>
       </header>
 
       <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
 
-      <section class="row g-3 mb-4" aria-label="Dashboard statistics">
-        <div v-for="card in statsCards" :key="card.label" class="col-md-6 col-xl-3">
-          <StatCard :label="card.label" :value="card.value" :helper="card.helper" />
+      <section class="history-toolbar mb-4" aria-labelledby="history-filter-title">
+        <div>
+          <p class="text-primary fw-semibold mb-1">Records</p>
+          <h2 id="history-filter-title" class="h4 fw-bold mb-0">Filter booking records</h2>
+        </div>
+
+        <div class="btn-group flex-wrap" role="group" aria-label="Filter booking history">
+          <button
+            v-for="filter in statusFilters"
+            :key="filter.value"
+            type="button"
+            :class="['btn btn-sm btn-pill', activeStatus === filter.value ? 'btn-primary' : 'btn-outline-primary']"
+            @click="activeStatus = filter.value"
+          >
+            {{ filter.label }}
+          </button>
         </div>
       </section>
 
-      <div class="row g-4 align-items-stretch">
-        <div class="col-lg-7">
-          <section class="dashboard-panel h-100" aria-labelledby="upcoming-title">
-            <div class="dashboard-panel-header">
-              <div>
-                <p class="text-primary fw-semibold mb-1">Bookings</p>
-                <h2 id="upcoming-title" class="h4 fw-bold mb-0">Upcoming bookings</h2>
+      <EmptyState
+        v-if="filteredBookings.length === 0"
+        title="No bookings found"
+        message="Bookings matching this filter will appear here."
+      />
+
+      <section v-else class="history-list" aria-label="Booking history records">
+        <article v-for="booking in filteredBookings" :key="booking.id" class="history-card">
+          <img
+            class="history-thumbnail"
+            :src="booking.image_url"
+            :alt="booking.title"
+            loading="lazy"
+          />
+
+          <div class="history-card-main">
+            <div class="history-card-title-row">
+              <span :class="['badge rounded-pill', statusClass(booking.status)]">
+                {{ booking.status }}
+              </span>
+
+              <h2 class="h5 fw-bold mb-0">{{ booking.title }}</h2>
+            </div>
+
+            <dl class="detail-list mt-3 mb-3">
+              <div class="detail-list-row">
+                <dt>Date</dt>
+                <dd>{{ formatDate(booking.event_date) }}</dd>
               </div>
-              <RouterLink class="btn btn-outline-primary btn-sm btn-pill" to="/history">View all</RouterLink>
-            </div>
 
-            <EmptyState v-if="upcomingBookings.length === 0" title="No confirmed bookings yet" message="Browse events and reserve your first ticket." />
-
-            <div v-else class="dashboard-booking-list">
-              <article v-for="booking in upcomingBookings" :key="booking.id" class="dashboard-booking-card">
-                <div>
-                  <span class="seat-status seat-status-success">Confirmed</span>
-                  <h3 class="h5 fw-bold mt-2 mb-1">{{ booking.title }}</h3>
-                  <p class="text-muted mb-1">{{ formatDate(booking.event_date) }} · {{ booking.ticket_count }} {{ Number(booking.ticket_count) === 1 ? 'ticket' : 'tickets' }}</p>
-                  <p class="small mb-0">Reference: <strong>{{ booking.booking_reference }}</strong></p>
-                </div>
-
-                <div class="dashboard-booking-actions">
-                  <strong>{{ formatCurrency(bookingTotal(booking)) }}</strong>
-                  <RouterLink class="btn btn-sm btn-outline-primary btn-pill" :to="eventRoute(booking)">View event</RouterLink>
-                </div>
-              </article>
-            </div>
-          </section>
-        </div>
-
-        <div class="col-lg-5">
-          <section class="dashboard-panel h-100" aria-labelledby="account-title">
-            <div class="dashboard-panel-header">
-              <div>
-                <p class="text-primary fw-semibold mb-1">Account</p>
-                <h2 id="account-title" class="h4 fw-bold mb-0">Account snapshot</h2>
+              <div class="detail-list-row">
+                <dt>Time</dt>
+                <dd>{{ booking.start_time }} - {{ booking.end_time }}</dd>
               </div>
-              <RouterLink class="btn btn-outline-primary btn-sm btn-pill" to="/profile">Edit</RouterLink>
-            </div>
 
-            <dl class="account-snapshot-list">
-              <div v-for="row in accountRows" :key="row.label" class="account-snapshot-row">
-                <dt>{{ row.label }}</dt>
-                <dd :class="{ 'text-capitalize': row.label === 'Role' }">{{ row.value }}</dd>
+              <div class="detail-list-row">
+                <dt>Location</dt>
+                <dd>{{ booking.location }}, {{ booking.city }}</dd>
+              </div>
+
+              <div class="detail-list-row">
+                <dt>Tickets</dt>
+                <dd>
+                  {{ booking.ticket_count }}
+                  {{ Number(booking.ticket_count) === 1 ? 'ticket' : 'tickets' }}
+                </dd>
               </div>
             </dl>
 
-            <div class="dashboard-help-card mt-4">
-              <h3 class="h6 fw-bold mb-2">Next best action</h3>
-              <p class="text-muted small mb-3">Keep your profile accurate so booking forms can be filled faster.</p>
-              <RouterLink class="btn btn-primary btn-sm btn-pill" to="/profile">Update profile</RouterLink>
+            <p class="history-reference-row mb-0">
+              <span>Reference</span>
+              <strong>{{ booking.booking_reference }}</strong>
+            </p>
+          </div>
+
+          <div class="history-card-aside">
+            <p class="text-muted fw-semibold mb-1">Total</p>
+            <strong class="h5 d-block mb-3">{{ formatCurrency(bookingTotal(booking)) }}</strong>
+
+            <div class="d-grid gap-2">
+              <RouterLink class="btn btn-sm btn-outline-primary btn-pill" :to="eventRoute(booking)">
+                View event
+              </RouterLink>
+
+              <button
+                v-if="booking.status === 'confirmed'"
+                class="btn btn-sm btn-outline-danger btn-pill"
+                type="button"
+                :disabled="cancellingId === booking.id"
+                @click="cancelBooking(booking)"
+              >
+                {{ cancellingId === booking.id ? 'Cancelling...' : 'Cancel' }}
+              </button>
             </div>
-          </section>
-        </div>
-      </div>
+          </div>
+        </article>
+      </section>
     </div>
   </div>
 </template>

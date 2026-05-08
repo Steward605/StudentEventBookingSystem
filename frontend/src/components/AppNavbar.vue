@@ -1,5 +1,5 @@
 <script>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -9,27 +9,38 @@ export default {
     const route = useRoute();
     const router = useRouter();
     const isMenuOpen = ref(false);
-
+    const isAccountMenuOpen = ref(false);
+    const accountMenuRef = ref(null);
     const navLinks = computed(() => {
       if (auth.isAdmin) {
         return [
-          { to: '/admin', label: 'Admin Dashboard' },
           { to: '/admin/events', label: 'Manage Events' },
           { to: '/admin/bookings', label: 'Bookings' },
           { to: '/admin/events/create', label: 'Create Event' },
-          { to: '/events', label: 'Public Site' },
-          { to: '/profile', label: 'Profile' }
+          { to: '/events', label: 'Public Site' }
         ];
       }
 
       return [
         { to: '/', label: 'Home' },
-        { to: '/events', label: 'Events' },
-        ...(auth.isAuthenticated ? [
-          { to: '/dashboard', label: 'Dashboard' },
-          { to: '/history', label: 'History' },
-          { to: '/profile', label: 'Profile' }
-        ] : [])
+        { to: '/events', label: 'Events' }
+      ];
+    });
+
+    const accountLinks = computed(() => {
+      if (!auth.isAuthenticated) {
+        return [];
+      }
+      if (auth.isAdmin) {
+        return [
+          { to: '/admin', label: 'Admin Dashboard' },
+          { to: '/profile', label: 'Profile Settings' }
+        ];
+      }
+      return [
+        { to: '/dashboard', label: 'Dashboard' },
+        { to: '/history', label: 'Booking History' },
+        { to: '/profile', label: 'Profile Settings' }
       ];
     });
 
@@ -45,24 +56,56 @@ export default {
       isMenuOpen.value = false;
     }
 
+    function toggleAccountMenu() {
+      isAccountMenuOpen.value = !isAccountMenuOpen.value;
+    }
+
+    function closeAccountMenu() {
+      isAccountMenuOpen.value = false;
+    }
+
+    function handleDocumentClick(event) {
+      if (!isAccountMenuOpen.value) {
+        return;
+      }
+      const menuRoot = accountMenuRef.value;
+      if (menuRoot && !menuRoot.contains(event.target)) {
+        closeAccountMenu();
+      }
+    }
+
+    function closeAllMenus() {
+      closeMenu();
+      closeAccountMenu();
+    }
+
     function logout() {
       auth.logout();
-      closeMenu();
+      closeAllMenus();
       router.push('/');
     }
 
-    watch(() => route.fullPath, closeMenu);
+    watch(() => route.fullPath, closeAllMenus);
+    onMounted(() => {
+      document.addEventListener('click', handleDocumentClick);
+      document.addEventListener('touchstart', handleDocumentClick);
+    });
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('touchstart', handleDocumentClick);
+    });
 
-    return {auth, navLinks, homePath, userInitial, userLabel, isMenuOpen, toggleMenu, closeMenu, logout};
+    return {auth, navLinks, accountLinks, homePath, userInitial, userLabel, isMenuOpen, isAccountMenuOpen, accountMenuRef, toggleMenu, closeMenu, toggleAccountMenu, closeAccountMenu, closeAllMenus, logout};
   }
 };
 </script>
 
 <template>
-  <nav class="navbar navbar-expand-lg app-navbar sticky-top" aria-label="Primary navigation" @keydown.esc="closeMenu">
+  <nav class="navbar navbar-expand-lg app-navbar sticky-top" aria-label="Primary navigation" @keydown.esc="closeAllMenus">
     <div class="container navbar-container">
-      <RouterLink class="navbar-brand app-brand" :to="homePath" aria-label="Student Event Booking System home" @click="closeMenu">
+      <RouterLink class="navbar-brand app-brand" :to="homePath" aria-label="Student Event Booking System home" @click="closeAllMenus">
         <span class="brand-mark">SEB</span>
+
         <span class="brand-copy">
           <strong>Student Event</strong>
           <span>Booking System</span>
@@ -85,16 +128,27 @@ export default {
         </ul>
 
         <div class="nav-actions">
-          <div v-if="auth.isAuthenticated" class="user-chip" aria-label="Current user">
-            <span class="user-avatar" aria-hidden="true">{{ userInitial }}</span>
-            <span class="user-name">{{ userLabel }}</span>
+          <div v-if="auth.isAuthenticated" ref="accountMenuRef" class="account-menu-wrap">
+            <button type="button" class="user-chip account-menu-trigger" :aria-expanded="isAccountMenuOpen ? 'true' : 'false'" aria-haspopup="true" @click="toggleAccountMenu">
+              <span class="user-avatar" aria-hidden="true">{{ userInitial }}</span>
+              <span class="user-name">{{ userLabel }}</span>
+              <span class="account-menu-caret" aria-hidden="true">▾</span>
+            </button>
+            <div v-if="isAccountMenuOpen" class="account-dropdown" role="menu">
+              <p class="account-dropdown-kicker">Account menu</p>
+              <RouterLink v-for="link in accountLinks" :key="link.to" class="account-dropdown-item" :to="link.to" role="menuitem" @click="closeAllMenus">
+                {{ link.label }}
+              </RouterLink>
+              <div class="account-dropdown-divider"></div>
+              <button class="account-dropdown-item account-dropdown-danger" type="button" role="menuitem" @click="logout">
+                Log out
+              </button>
+            </div>
           </div>
 
-          <button v-if="auth.isAuthenticated" class="btn btn-outline-primary btn-sm btn-pill" type="button" @click="logout">Log out</button>
-
           <template v-else>
-            <RouterLink class="btn btn-outline-primary btn-sm btn-pill" to="/login" @click="closeMenu">Log in</RouterLink>
-            <RouterLink class="btn btn-primary btn-sm btn-pill" to="/register" @click="closeMenu">Register</RouterLink>
+            <RouterLink class="btn btn-outline-primary btn-sm btn-pill" to="/login" @click="closeAllMenus">Log in</RouterLink>
+            <RouterLink class="btn btn-primary btn-sm btn-pill" to="/register" @click="closeAllMenus">Register</RouterLink>
           </template>
         </div>
       </div>
