@@ -15,7 +15,8 @@ export default {
       if (auth.isAdmin) {
         return [
           { to: '/admin', label: 'Admin Dashboard', adminRoot: true },
-          { to: '/events', label: 'Public Events Site' }
+          { to: '/', label: 'Public Home Page' },
+          { to: '/events', label: 'Public Events Page' }
         ];
       }
 
