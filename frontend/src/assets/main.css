@@ -255,9 +255,12 @@ textarea {
   text-decoration: none;
 }
 
-.app-nav-link.active {
+.app-navbar .navbar-nav .app-nav-link.active,
+.app-navbar .navbar-nav .app-nav-link.active:hover,
+.app-navbar .navbar-nav .app-nav-link.active:focus {
   background: var(--eh-primary);
-  color: #ffffff;
+  border-color: var(--eh-primary);
+  color: #ffffff !important;
 }
 
 .app-navbar-toggler {
