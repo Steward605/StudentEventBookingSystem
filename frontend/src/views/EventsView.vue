@@ -24,10 +24,33 @@ export default {
     });
 
     const currentPage = ref(1);
+    const filtersExpanded = ref(true);
     const perPage = 12;
     let debounceTimer;
 
     const hasActiveFilters = computed(() => Boolean(filters.search || filters.category || filters.freeOnly));
+    const filterSummary = computed(() => {
+      const activeFilters = [];
+      const searchTerm = filters.search.trim();
+      if (searchTerm) {
+        activeFilters.push(`search "${searchTerm}"`);
+      }
+      if (filters.category) {
+        activeFilters.push(`category ${filters.category}`);
+      }
+      if (filters.freeOnly) {
+        activeFilters.push('free events only');
+      }
+      return activeFilters.length
+        ? `Active filters: ${activeFilters.join(', ')}`
+        : 'No filters applied';
+    });
+
+    const filterPanelDescription = computed(() => {
+      return filtersExpanded.value
+        ? 'Filters update automatically after typing.'
+        : filterSummary.value;
+    });
 
     const resultCount = computed(() => eventStore.pagination.totalItems ?? eventStore.events.length);
 
@@ -78,6 +101,10 @@ export default {
       filters.freeOnly = false;
     }
 
+    function toggleFilters() {
+      filtersExpanded.value = !filtersExpanded.value;
+    }
+
     function goToPage(pageNum) {
       const totalPages = eventStore.pagination.totalPages || 1;
       if (pageNum < 1 || pageNum > totalPages || pageNum === eventStore.pagination.page) {
@@ -93,7 +120,7 @@ export default {
       window.clearTimeout(debounceTimer);
     });
 
-    return {eventStore, filters, currentPage, hasActiveFilters, resultLabel, paginationLabel, clearFilters, goToPage};
+    return {eventStore, filters, currentPage, filtersExpanded, hasActiveFilters, resultLabel, paginationLabel, filterSummary, filterPanelDescription, clearFilters, toggleFilters, goToPage};
   }
 };
 </script>
@@ -112,36 +139,54 @@ export default {
       </div>
     </header>
 
-    <section class="filter-panel glass-panel mb-5" aria-labelledby="event-filter-title">
+    <section class="filter-panel glass-panel mb-5" :class="{ 'is-collapsed': !filtersExpanded }" aria-labelledby="event-filter-title" aria-describedby="event-filter-description">
       <div class="filter-panel-header">
-        <div>
+        <div class="filter-panel-heading">
           <h2 id="event-filter-title" class="h5 fw-bold mb-1">Refine event results</h2>
-          <p class="text-muted small mb-0">Filters update automatically after typing.</p>
+          <p id="event-filter-description" class="text-muted small mb-0" aria-live="polite">
+            {{ filterPanelDescription }}
+          </p>
         </div>
-        <button v-if="hasActiveFilters" type="button" class="btn btn-outline-primary btn-sm btn-pill" @click="clearFilters">Clear filters</button>
+
+        <div class="filter-panel-actions">
+          <button v-if="hasActiveFilters" type="button" class="btn btn-outline-primary btn-sm btn-pill" @click="clearFilters">
+            Clear filters
+          </button>
+          <button type="button" class="btn btn-primary btn-sm btn-pill filter-toggle-btn" :aria-expanded="filtersExpanded" aria-controls="event-filter-controls" @click="toggleFilters">
+            <span class="filter-toggle-icon" aria-hidden="true">
+              {{ filtersExpanded ? '▲' : '▼' }}
+            </span>
+          </button>
+        </div>
       </div>
 
-      <div class="row g-3 align-items-end">
-        <div class="col-lg-6">
-          <label class="form-label" for="event-search">Search events</label>
-          <input id="event-search" v-model.trim="filters.search" type="search" class="form-control" placeholder="Search campus experiences..." autocomplete="off" />
-        </div>
+      <Transition name="filter-collapse">
+        <div v-show="filtersExpanded" id="event-filter-controls" class="filter-panel-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-lg-6">
+              <label class="form-label" for="event-search">Search events</label>
+              <input id="event-search" v-model.trim="filters.search" type="search" class="form-control" placeholder="Search campus experiences..." autocomplete="off"/>
+            </div>
 
-        <div class="col-md-6 col-lg-4">
-          <label class="form-label" for="event-category">Category</label>
-          <select id="event-category" v-model="filters.category" class="form-select">
-            <option value="">All categories</option>
-            <option v-for="category in eventStore.categories" :key="category" :value="category">{{ category }}</option>
-          </select>
-        </div>
+            <div class="col-md-6 col-lg-4">
+              <label class="form-label" for="event-category">Category</label>
+              <select id="event-category" v-model="filters.category" class="form-select">
+                <option value="">All categories</option>
+                <option v-for="category in eventStore.categories" :key="category" :value="category">
+                  {{ category }}
+                </option>
+              </select>
+            </div>
 
-        <div class="col-md-6 col-lg-2">
-          <div class="filter-switch">
-            <input id="freeOnly" v-model="filters.freeOnly" class="form-check-input" type="checkbox" />
-            <label class="form-check-label" for="freeOnly">Free only</label>
+            <div class="col-md-6 col-lg-2">
+              <div class="filter-switch">
+                <input id="freeOnly" v-model="filters.freeOnly" class="form-check-input" type="checkbox"/>
+                <label class="form-check-label" for="freeOnly">Free only</label>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
     </section>
 
     <div v-if="eventStore.error" class="alert alert-danger" role="alert">{{ eventStore.error }}</div>

@@ -898,6 +898,72 @@ textarea {
   margin-bottom: 1rem;
 }
 
+.filter-panel.is-collapsed {
+  padding-bottom: 0.75rem;
+}
+
+.filter-panel.is-collapsed .filter-panel-header {
+  margin-bottom: 0;
+}
+
+.filter-panel-heading {
+  min-width: 0;
+}
+
+.filter-panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.filter-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.45rem;
+}
+
+.filter-toggle-btn:focus-visible {
+  outline: 3px solid rgba(49, 94, 251, 0.24);
+  outline-offset: 3px;
+}
+
+.filter-toggle-icon {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.filter-panel-body {
+  overflow: hidden;
+}
+
+.filter-collapse-enter-active,
+.filter-collapse-leave-active {
+  max-height: 28rem;
+  overflow: hidden;
+  transition:
+    max-height 0.24s ease,
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.filter-collapse-enter-from,
+.filter-collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+}
+
+.filter-collapse-enter-to,
+.filter-collapse-leave-from {
+  max-height: 28rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .filter-switch {
   display: flex;
   align-items: center;
