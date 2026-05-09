@@ -33,10 +33,19 @@ router.get('/overview', requireAuth, (req, res) => {
 
 router.get('/admin-overview', requireAuth, requireAdmin, (req, res) => {
   const eventStats = db.prepare(`
-    SELECT COUNT(*) AS totalEvents,
-      SUM(CASE WHEN event_date >= date('now') THEN 1 ELSE 0 END) AS upcomingEvents,
+    SELECT
+      COUNT(*) AS totalEvents,
+      COALESCE(SUM(CASE WHEN seats_left <= 0 THEN 1 ELSE 0 END), 0) AS soldOutEvents,
       COALESCE(SUM(capacity), 0) AS totalCapacity
-    FROM events
+    FROM (
+      SELECT
+        e.id,
+        e.capacity,
+        e.capacity - COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.ticket_count ELSE 0 END), 0) AS seats_left
+      FROM events e
+      LEFT JOIN bookings b ON b.event_id = e.id
+      GROUP BY e.id
+    ) AS event_capacity_summary
   `).get();
 
   const bookingStats = db.prepare(`
@@ -66,7 +75,7 @@ router.get('/admin-overview', requireAuth, requireAdmin, (req, res) => {
   res.json({
     stats: {
       totalEvents: eventStats.totalEvents,
-      upcomingEvents: eventStats.upcomingEvents || 0,
+      soldOutEvents: eventStats.soldOutEvents || 0,
       totalCapacity: eventStats.totalCapacity,
       totalBookings: bookingStats.totalBookings,
       confirmedTickets: bookingStats.confirmedTickets,

@@ -22,10 +22,10 @@ export default {
         tone: 'primary'
       },
       {
-        label: 'Upcoming events',
-        value: stats.value?.upcomingEvents ?? 0,
-        helper: 'Events from today onward',
-        tone: 'info'
+        label: 'Sold out events',
+        value: stats.value?.soldOutEvents ?? 0,
+        helper: 'No seats remaining',
+        tone: 'warning'
       },
       {
         label: 'Confirmed bookings',
