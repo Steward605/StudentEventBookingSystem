@@ -214,7 +214,7 @@ function parseEventPayload(body) {
     end_time: requiredString(body.end_time, 'End time'),
     capacity: requiredPositiveInteger(body.capacity, 'Capacity'),
     price: optionalNumber(body.price, 0),
-    image_url: requiredString(body.image_url, 'Image URL'),
+    image_url: body.image_url?.trim() || '',
     organiser: requiredString(body.organiser, 'Organiser'),
     accessibility_notes: body.accessibility_notes?.trim() || 'No additional accessibility notes provided.'
   };

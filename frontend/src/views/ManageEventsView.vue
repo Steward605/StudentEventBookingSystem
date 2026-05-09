@@ -83,7 +83,6 @@ export default {
       filters.search = '';
       filters.category = '';
       filters.availability = 'all';
-      fetchAdminEvents(1);
     }
 
     function requestDelete(event) {

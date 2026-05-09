@@ -14,7 +14,7 @@ export default {
     const navLinks = computed(() => {
       if (auth.isAdmin) {
         return [
-          { to: '/admin', label: 'Admin Dashboard', adminRoot: true },
+          { to: '/admin', label: 'Admin Dashboard', navGroup: 'admin' },
           { to: '/', label: 'Public Home Page' },
           { to: '/events', label: 'Public Events Page' }
         ];
@@ -125,7 +125,7 @@ export default {
         <ul class="navbar-nav app-nav-list me-auto mb-3 mb-lg-0">
           <li v-for="link in navLinks" :key="link.to" class="nav-item">
             <RouterLink v-slot="{ href, navigate, isActive }" :to="link.to" custom>
-              <a :href="href" :class="['nav-link app-nav-link', { active: isNavLinkActive(link, isActive) }]" :aria-current="isActive ? 'page' : undefined" @click="navigate">
+              <a :href="href" :class="['nav-link app-nav-link', { active: isNavLinkActive(link, isActive) }]" :aria-current="isActive ? 'page' : undefined" @click="event => { navigate(event); closeAllMenus(); }">
                 {{ link.label }}
               </a>
             </RouterLink>

@@ -89,14 +89,19 @@
         <input id="organiser" v-model.trim="form.organiser" class="form-control" required />
       </div>
       <div class="col-12">
-        <label for="image" class="form-label">Image URL</label>
-        <input id="image" v-model.trim="form.image_url" type="url" class="form-control" placeholder="https://example.com/event-image.jpg" required />
+        <label for="image" class="form-label">
+          Image URL <span class="text-muted fw-normal">(optional)</span>
+        </label>
+        <input id="image" v-model.trim="form.image_url" type="url" class="form-control" placeholder="https://example.com/event-image.jpg"/>
+        <div class="form-text">Leave blank to use the default event cover image.</div>
       </div>
       <div class="col-12">
         <label for="accessibility" class="form-label">Accessibility notes</label>
         <textarea id="accessibility" v-model.trim="form.accessibility_notes" class="form-control" rows="3"></textarea>
       </div>
     </div>
-    <button class="btn btn-primary mt-4" type="submit" :disabled="loading">{{ loading ? 'Saving...' : submitLabel }}</button>
+    <button class="btn btn-primary btn-pill btn-hover-elevate mt-4" type="submit" :disabled="loading">
+      {{ loading ? 'Saving...' : submitLabel }}
+    </button>
   </form>
 </template>

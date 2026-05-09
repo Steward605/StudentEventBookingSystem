@@ -10,6 +10,7 @@
       const router = useRouter();
       const loading = ref(false);
       const error = ref('');
+      const preventPasswordAutofill = ref(true);
       const form = reactive({ email: '', password: '' });
 
       async function submit() {
@@ -25,7 +26,7 @@
         }
       }
 
-      return {loading, error, form, submit};
+      return {loading, error, form, submit, preventPasswordAutofill};
     }
   };
 </script>
@@ -41,13 +42,15 @@
           <form @submit.prevent="submit">
             <div class="mb-3">
               <label for="email" class="form-label">Email</label>
-              <input id="email" v-model.trim="form.email" type="email" class="form-control" required autocomplete="email" />
+              <input id="email" v-model.trim="form.email" type="email" class="form-control" required autocomplete="email" autocapitalize="none" spellcheck="false" @focus="preventPasswordAutofill = false" @pointerdown="preventPasswordAutofill = false"/>
             </div>
             <div class="mb-4">
               <label for="password" class="form-label">Password</label>
-              <input id="password" v-model="form.password" type="password" class="form-control" required autocomplete="current-password" />
+              <input id="password" v-model="form.password" type="password" class="form-control" required autocomplete="current-password" autocapitalize="none" :readonly="preventPasswordAutofill" @focus="preventPasswordAutofill = false" @pointerdown="preventPasswordAutofill = false" @keydown="preventPasswordAutofill = false"/>
             </div>
-            <button class="btn btn-primary w-100" type="submit" :disabled="loading">{{ loading ? 'Logging in...' : 'Log in' }}</button>
+            <button class="btn btn-primary btn-pill btn-hover-elevate w-100" type="submit" :disabled="loading">
+              {{ loading ? 'Logging in...' : 'Log in' }}
+            </button>
           </form>
           <p class="mt-3 mb-0 small">Need an account? <RouterLink to="/register">Register here</RouterLink>.</p>
         </div>

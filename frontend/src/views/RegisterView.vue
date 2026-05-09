@@ -64,7 +64,9 @@ export default {
                 <textarea id="interests" v-model.trim="form.interests" class="form-control" rows="3" placeholder="e.g. design, AI, career events"></textarea>
               </div>
             </div>
-            <button class="btn btn-primary mt-4" type="submit" :disabled="loading">{{ loading ? 'Creating...' : 'Create account' }}</button>
+            <button class="btn btn-primary btn-pill btn-hover-elevate mt-4" type="submit" :disabled="loading">
+              {{ loading ? 'Creating...' : 'Create account' }}
+            </button>
           </form>
         </div>
       </div>
