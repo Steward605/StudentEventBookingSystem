@@ -24,27 +24,25 @@ export default {
     const attemptedSubmit = ref(false);
 
     const form = reactive({
-      ticket_count: 1,
+      seat_count: 1,
       attendee_name: auth.user?.name || '',
       attendee_email: auth.user?.email || ''
     });
 
     const seatsLeft = computed(() => Number(event.value?.seats_left ?? 0));
-    const maxTickets = computed(() => Math.max(1, Math.min(seatsLeft.value || 1, 6)));
+    const maxSeats = computed(() => Math.max(1, Math.min(seatsLeft.value || 1, 6)));
     const isSoldOut = computed(() => seatsLeft.value <= 0);
 
     const fieldErrors = computed(() => {
       const errors = {};
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const ticketCount = Number(form.ticket_count);
-
+      const seatCount = Number(form.seat_count);
       if (!form.attendee_name.trim()) errors.attendee_name = 'Enter the attendee name.';
       if (!form.attendee_email.trim()) errors.attendee_email = 'Enter the attendee email address.';
       else if (!emailPattern.test(form.attendee_email.trim())) errors.attendee_email = 'Enter a valid email address.';
-      if (!Number.isInteger(ticketCount) || ticketCount < 1) errors.ticket_count = 'Choose at least 1 ticket.';
-      else if (event.value && ticketCount > maxTickets.value) errors.ticket_count = `Choose ${maxTickets.value} tickets or fewer.`;
-      if (isSoldOut.value) errors.ticket_count = 'This event is sold out.';
-
+      if (!Number.isInteger(seatCount) || seatCount < 1) errors.seat_count = 'Choose at least 1 seat.';
+      else if (event.value && seatCount > maxSeats.value) errors.seat_count = `Choose ${maxSeats.value} seats or fewer.`;
+      if (isSoldOut.value) errors.seat_count = 'This event is sold out.';
       return errors;
     });
 
@@ -101,7 +99,7 @@ export default {
       try {
         const booking = await bookingStore.createBooking({
           event_id: Number(route.params.id),
-          ticket_count: Number(form.ticket_count),
+          seat_count: Number(form.seat_count),
           attendee_name: form.attendee_name.trim(),
           attendee_email: form.attendee_email.trim()
         });
@@ -125,7 +123,7 @@ export default {
       }
     });
 
-    return {event, loading, submitting, error, success, bookingReference, copyStatus, form, maxTickets, isSoldOut, attemptedSubmit, fieldErrors, canSubmit, showError, copyBookingReference, submitBooking};
+    return {event, loading, submitting, error, success, bookingReference, copyStatus, form, maxSeats, isSoldOut, attemptedSubmit, fieldErrors, canSubmit, showError, copyBookingReference, submitBooking};
   }
 };
 </script>
@@ -196,10 +194,11 @@ export default {
           </div>
 
           <div class="mb-4">
-            <label for="ticketCount" class="form-label">Tickets</label>
-            <input id="ticketCount" v-model.number="form.ticket_count" class="form-control" :class="{ 'is-invalid': showError('ticket_count') }" type="number" min="1" :max="maxTickets" required inputmode="numeric" :disabled="isSoldOut" :aria-invalid="showError('ticket_count') ? 'true' : 'false'" aria-describedby="ticketCountHelp ticketCountError" />
-            <div id="ticketCountHelp" class="form-text">Maximum {{ maxTickets }} tickets per booking. {{ event.seats_left }} seats left.</div>
-            <div v-if="showError('ticket_count')" id="ticketCountError" class="invalid-feedback">{{ fieldErrors.ticket_count }}</div>
+            <label for="seatCount" class="form-label">Seats</label>
+            <input id="seatCount" v-model.number="form.seat_count" class="form-control" :class="{ 'is-invalid': showError('seat_count') }" type="number" min="1" :max="maxSeats" required inputmode="numeric" :disabled="isSoldOut" :aria-invalid="showError('seat_count') ? 'true' : 'false'" aria-describedby="seatCountHelp seatCountError" />
+
+            <div id="seatCountHelp" class="form-text">Maximum {{ maxSeats }} seats per booking. {{ event.seats_left }} seats left.</div>
+            <div v-if="showError('seat_count')" id="seatCountError" class="invalid-feedback">{{ fieldErrors.seat_count }}</div>
           </div>
 
           <div class="d-flex flex-column flex-sm-row gap-2">
@@ -212,7 +211,7 @@ export default {
       </div>
 
       <div class="col-lg-5 booking-summary-column">
-        <BookingSummary :event="event" :tickets="Number(form.ticket_count) || 1" />
+        <BookingSummary :event="event" :reserved-seats="Number(form.seat_count) || 1" />
       </div>
     </div>
   </div>

@@ -30,13 +30,13 @@ export default {
     const summaryCards = computed(() => {
       const confirmed = bookings.value.filter(booking => booking.status === 'confirmed').length;
       const cancelled = bookings.value.filter(booking => booking.status === 'cancelled').length;
-      const tickets = bookings.value.filter(booking => booking.status === 'confirmed').reduce((sum, booking) => sum + Number(booking.ticket_count || 0), 0);
+      const reservedSeats = bookings.value.filter(booking => booking.status === 'confirmed').reduce((sum, booking) => sum + Number(booking.seat_count ?? booking.ticket_count ?? 0), 0);
 
       return [
         {label: 'Total records', value: bookings.value.length},
         {label: 'Confirmed', value: confirmed},
         {label: 'Cancelled', value: cancelled},
-        {label: 'Confirmed tickets', value: tickets}
+        {label: 'Reserved seats', value: reservedSeats}
       ];
     });
 
@@ -61,7 +61,7 @@ export default {
     }
 
     function bookingTotal(booking) {
-      return Number(booking.price || 0) * Number(booking.ticket_count || 0);
+      return Number(booking.price || 0) * Number(booking.seat_count ?? booking.ticket_count ?? 0);
     }
 
     function statusClass(status) {
@@ -199,7 +199,7 @@ export default {
         </div>
       </section>
 
-      <EmptyState v-if="bookings.length === 0" title="No bookings found" message="Student bookings will appear here after tickets are reserved." />
+      <EmptyState v-if="bookings.length === 0" title="No bookings found" message="Student bookings will appear here after seats are reserved." />
 
       <EmptyState v-else-if="filteredBookings.length === 0" title="No matching bookings" message="Try a different keyword or status filter." />
 
@@ -237,8 +237,8 @@ export default {
                 <dd>{{ formatDate(booking.event_date) }}</dd>
               </div>
               <div>
-                <dt>Tickets</dt>
-                <dd>{{ booking.ticket_count }}</dd>
+                <dt>Seats</dt>
+                <dd>{{ booking.seat_count ?? booking.ticket_count }}</dd>
               </div>
               <div>
                 <dt>Total</dt>

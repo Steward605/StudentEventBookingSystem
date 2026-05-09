@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/overview', requireAuth, (req, res) => {
   const userBookings = db.prepare(`
     SELECT COUNT(*) AS count,
-      COALESCE(SUM(ticket_count), 0) AS tickets
+      COALESCE(SUM(ticket_count), 0) AS seats
     FROM bookings
     WHERE user_id = ? AND status = 'confirmed'
   `).get(req.user.id);
@@ -24,6 +24,7 @@ router.get('/overview', requireAuth, (req, res) => {
   res.json({
     stats: {
       myBookings: userBookings.count,
+      mySeats: userBookings.seats,
       myTickets: userBookings.tickets,
       upcomingEvents: upcoming.count,
       totalEvents: totalEvents.count
@@ -50,7 +51,7 @@ router.get('/admin-overview', requireAuth, requireAdmin, (req, res) => {
 
   const bookingStats = db.prepare(`
     SELECT COUNT(*) AS totalBookings,
-      COALESCE(SUM(ticket_count), 0) AS confirmedTickets
+      COALESCE(SUM(ticket_count), 0) AS confirmedSeats
     FROM bookings
     WHERE status = 'confirmed'
   `).get();
@@ -62,7 +63,7 @@ router.get('/admin-overview', requireAuth, requireAdmin, (req, res) => {
   `).get();
 
   const recentBookings = db.prepare(`
-    SELECT b.id, b.ticket_count, b.status, b.booking_reference, b.created_at,
+    SELECT b.id, b.ticket_count, b.ticket_count AS seat_count, b.status, b.booking_reference, b.created_at,
       u.name AS student_name, u.email AS student_email,
       e.title AS event_title, e.event_date, e.start_time
     FROM bookings b
@@ -78,7 +79,8 @@ router.get('/admin-overview', requireAuth, requireAdmin, (req, res) => {
       soldOutEvents: eventStats.soldOutEvents || 0,
       totalCapacity: eventStats.totalCapacity,
       totalBookings: bookingStats.totalBookings,
-      confirmedTickets: bookingStats.confirmedTickets,
+      confirmedSeats: bookingStats.confirmedSeats,
+      confirmedTickets: bookingStats.confirmedSeats, // legacy compatibility
       totalStudents: totalStudents.count
     },
     recentBookings

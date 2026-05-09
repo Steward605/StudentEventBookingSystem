@@ -205,7 +205,7 @@ The frontend runs as a single-page application and communicates with the backend
 - Event detail pages with event capacity, accessibility notes, and weather context.
 - User registration and login.
 - JWT-based authenticated sessions.
-- Student booking flow with ticket quantity and attendee details.
+- Student booking events with seat quantity and attendee details.
 - Booking history with cancellation support.
 - User dashboard with booking and event statistics.
 - Profile viewing and editing.
@@ -295,7 +295,7 @@ The database contains three main tables:
 |---|---|
 | `users` | Stores user accounts, roles, profile details, and hashed passwords. |
 | `events` | Stores event details such as category, location, date, time, capacity, price, organiser, and accessibility notes. |
-| `bookings` | Stores user bookings, ticket counts, attendee details, booking references, and booking status. |
+| `bookings` | Stores user bookings, reserved seat counts, attendee details, booking references, and booking status. |
 
 Foreign key support is enabled so bookings remain linked to valid users and events.
 

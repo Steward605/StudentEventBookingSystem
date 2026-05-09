@@ -8,6 +8,7 @@ router.get('/', requireAuth, (req, res) => {
   const bookings = db.prepare(`
     SELECT
       b.*,
+      b.ticket_count AS seat_count,
       e.title,
       e.category,
       e.location,
@@ -31,6 +32,7 @@ router.get('/all', requireAuth, requireAdmin, (req, res) => {
   const bookings = db.prepare(`
     SELECT
       b.*,
+      b.ticket_count AS seat_count,
       u.name AS student_name,
       u.email AS student_email,
       e.title,
@@ -55,11 +57,11 @@ router.get('/all', requireAuth, requireAdmin, (req, res) => {
 
 router.post('/', requireAuth, (req, res, next) => {
   if (req.user.role === 'admin') {
-    return res.status(403).json({ message: 'Admin accounts cannot book event tickets.' });
+    return res.status(403).json({ message: 'Admin accounts cannot reserve seats for events.' });
   }
   try {
     const eventId = requiredPositiveInteger(req.body.event_id, 'Event ID');
-    const ticketCount = requiredPositiveInteger(req.body.ticket_count, 'Ticket count');
+    const seatCount = requiredPositiveInteger(req.body.seat_count ?? req.body.ticket_count, 'Seat count');
     const attendeeName = requiredString(req.body.attendee_name, 'Attendee name');
     const attendeeEmail = requiredEmail(req.body.attendee_email);
     const bookEventTransaction = db.transaction(() => {
@@ -94,7 +96,7 @@ router.post('/', requireAuth, (req, res, next) => {
 
       const seatsLeft = event.capacity - event.booked;
 
-      if (seatsLeft < ticketCount) {
+      if (seatsLeft < seatCount) {
         const error = new Error(`Only ${seatsLeft} seat(s) are left for this event.`);
         error.status = 409;
         throw error;
@@ -111,7 +113,7 @@ router.post('/', requireAuth, (req, res, next) => {
           booking_reference
         )
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(req.user.id, eventId, ticketCount, attendeeName, attendeeEmail, reference);
+      `).run(req.user.id, eventId, seatCount, attendeeName, attendeeEmail, reference);
       return result.lastInsertRowid;
     });
 
@@ -119,6 +121,7 @@ router.post('/', requireAuth, (req, res, next) => {
     const booking = db.prepare(`
       SELECT
         b.*,
+        b.ticket_count AS seat_count,
         e.title,
         e.location,
         e.event_date,

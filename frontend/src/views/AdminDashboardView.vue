@@ -39,9 +39,9 @@ export default {
         tone: 'success'
       },
       {
-        label: 'Confirmed tickets',
-        value: stats.value?.confirmedTickets ?? 0,
-        helper: 'Tickets reserved by students',
+        label: 'Reserved seats',
+        value: stats.value?.confirmedSeats ?? stats.value?.confirmedTickets ?? 0,
+        helper: 'Seats reserved by students',
         tone: 'warning'
       }
     ]);
@@ -146,11 +146,7 @@ export default {
               </RouterLink>
             </div>
 
-            <EmptyState
-              v-if="recentBookings.length === 0"
-              title="No bookings yet"
-              message="Student bookings will appear here after tickets are reserved."
-            />
+            <EmptyState v-if="recentBookings.length === 0" title="No bookings yet"/>
 
             <div v-else class="admin-booking-list">
               <article
@@ -176,8 +172,8 @@ export default {
                     </div>
 
                     <div>
-                      <dt>Tickets</dt>
-                      <dd>{{ booking.ticket_count }}</dd>
+                      <dt>Seats</dt>
+                      <dd>{{ booking.seat_count ?? booking.ticket_count }}</dd>
                     </div>
 
                     <div>

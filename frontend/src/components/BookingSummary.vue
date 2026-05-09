@@ -5,14 +5,13 @@ import { formatCurrency, formatDate, formatTimeRange } from '@/utils/formatters'
 export default {
   props: {
     event: {type: Object, required: true},
-    tickets: {type: Number, default: 1}
+    reservedSeats: { type: Number, default: 1 }
   },
   setup(props) {
-    const safeTickets = computed(() => Math.max(1, Number(props.tickets) || 1));
-    const total = computed(() => Number(props.event.price || 0) * safeTickets.value);
+    const safeReservedSeats = computed(() => Math.max(1, Number(props.reservedSeats) || 1));
+    const total = computed(() => Number(props.event.price || 0) * safeReservedSeats.value);
     const locationLabel = computed(() => [props.event.location, props.event.city].filter(Boolean).join(', ') || 'Location to be confirmed');
-
-    return {safeTickets, total, locationLabel, formatCurrency, formatDate, formatTimeRange};
+    return {safeReservedSeats, total, locationLabel, formatCurrency, formatDate, formatTimeRange};
   }
 };
 </script>
@@ -30,8 +29,8 @@ export default {
 
     <dl class="summary-list">
       <div class="summary-row">
-        <dt>Tickets</dt>
-        <dd>{{ safeTickets }}</dd>
+        <dt>Seats reserved</dt>
+        <dd>{{ safeReservedSeats }}</dd>
       </div>
       <div class="summary-row">
         <dt>Price each</dt>

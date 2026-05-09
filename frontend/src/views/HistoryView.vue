@@ -37,17 +37,36 @@ export default {
     });
     const confirmedCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'confirmed').length);
     const cancelledCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'cancelled').length);
-    const totalTickets = computed(() => {
+    function reservedSeatCount(booking) {
+      return Number(booking.seat_count ?? booking.ticket_count ?? 0);
+    }
+
+    function seatLabel(count) {
+      return Number(count) === 1 ? 'seat' : 'seats';
+    }
+    const totalSeats = computed(() => {
       return bookingStore.bookings
         .filter(booking => booking.status === 'confirmed')
-        .reduce((sum, booking) => sum + Number(booking.ticket_count || 0), 0);
+        .reduce((sum, booking) => sum + reservedSeatCount(booking), 0);
     });
     const summaryCards = computed(() => [
       { label: 'Total records', value: bookingStore.bookings.length, helper: 'All booking attempts' },
       { label: 'Confirmed', value: confirmedCount.value, helper: 'Active reservations' },
       { label: 'Cancelled', value: cancelledCount.value, helper: 'Removed reservations' },
-      { label: 'Tickets held', value: totalTickets.value, helper: 'Confirmed tickets' }
+      { label: 'Seats held', value: totalSeats.value, helper: 'Confirmed seats' }
     ]);
+
+    function reservedSeatCount(booking) {
+      return Number(booking.seat_count ?? booking.ticket_count ?? 0);
+    }
+
+    function seatLabel(count) {
+      return Number(count) === 1 ? 'seat' : 'seats';
+    }
+
+    function bookingTotal(booking) {
+      return Number(booking.price || 0) * reservedSeatCount(booking);
+    }
 
     function bookingTotal(booking) {
       return Number(booking.price || 0) * Number(booking.ticket_count || 0);
@@ -90,7 +109,7 @@ export default {
       }
     });
 
-    return {bookingStore, loading, error, activeStatus, statusFilters, filteredBookings, summaryCards, cancellingId, bookingTotal, eventRoute, statusClass, cancelBooking, formatCurrency, formatDate};
+    return {bookingStore, loading, error, activeStatus, statusFilters, filteredBookings, summaryCards, cancellingId, bookingTotal, reservedSeatCount, seatLabel, eventRoute, statusClass, cancelBooking, formatCurrency, formatDate};
   }
 };
 </script>
@@ -176,10 +195,10 @@ export default {
               </div>
 
               <div class="detail-list-row">
-                <dt>Tickets</dt>
+                <dt>Seats</dt>
                 <dd>
-                  {{ booking.ticket_count }}
-                  {{ Number(booking.ticket_count) === 1 ? 'ticket' : 'tickets' }}
+                  {{ reservedSeatCount(booking) }}
+                  {{ seatLabel(reservedSeatCount(booking)) }}
                 </dd>
               </div>
             </dl>

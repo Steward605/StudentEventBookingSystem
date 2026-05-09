@@ -22,10 +22,10 @@ export default {
         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
         .slice(0, 3);
     });
-    const totalTickets = computed(() => confirmedBookings.value.reduce((sum, booking) => sum + Number(booking.ticket_count || 0), 0));
+    const totalSeats = computed(() => confirmedBookings.value.reduce((sum, booking) => sum + Number(booking.seat_count ?? booking.ticket_count ?? 0), 0));
     const statsCards = computed(() => [
       {label: 'My bookings', value: stats.value?.myBookings ?? confirmedBookings.value.length, helper: 'Confirmed bookings'},
-      {label: 'My tickets', value: stats.value?.myTickets ?? totalTickets.value, helper: 'Total confirmed tickets'},
+      {label: 'My seats', value: stats.value?.mySeats ?? stats.value?.myTickets ?? totalSeats.value, helper: 'Total confirmed seats'},
       {label: 'Upcoming', value: stats.value?.upcomingEvents ?? upcomingBookings.value.length, helper: 'Future booked events'},
       {label: 'Platform events', value: stats.value?.totalEvents ?? 0, helper: 'Available in catalogue'}
     ]);
@@ -36,8 +36,16 @@ export default {
       {label: 'Role', value: auth.user?.role || 'student'}
     ]);
 
+    function reservedSeatCount(booking) {
+      return Number(booking.seat_count ?? booking.ticket_count ?? 0);
+    }
+
+    function seatLabel(count) {
+      return Number(count) === 1 ? 'seat' : 'seats';
+    }
+
     function bookingTotal(booking) {
-      return Number(booking.price || 0) * Number(booking.ticket_count || 0);
+      return Number(booking.price || 0) * reservedSeatCount(booking);
     }
 
     function eventRoute(booking) {
@@ -59,7 +67,7 @@ export default {
       }
     });
 
-    return {auth, statsCards, loading, error, upcomingBookings, accountRows, bookingTotal, eventRoute, formatCurrency, formatDate};
+    return {auth, statsCards, loading, error, upcomingBookings, accountRows, bookingTotal, reservedSeatCount, seatLabel, eventRoute, formatCurrency, formatDate};
   }
 };
 </script>
