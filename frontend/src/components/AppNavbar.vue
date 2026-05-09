@@ -14,10 +14,8 @@ export default {
     const navLinks = computed(() => {
       if (auth.isAdmin) {
         return [
-          { to: '/admin/events', label: 'Manage Events' },
-          { to: '/admin/bookings', label: 'Bookings' },
-          { to: '/admin/events/create', label: 'Create Event' },
-          { to: '/events', label: 'Public Site' }
+          { to: '/admin', label: 'Admin Dashboard', adminRoot: true },
+          { to: '/events', label: 'Public Events Site' }
         ];
       }
 
@@ -33,7 +31,6 @@ export default {
       }
       if (auth.isAdmin) {
         return [
-          { to: '/admin', label: 'Admin Dashboard' },
           { to: '/profile', label: 'Profile Settings' }
         ];
       }
@@ -79,6 +76,13 @@ export default {
       closeAccountMenu();
     }
 
+    function isNavLinkActive(link, isActive) {
+      if (link.navGroup) {
+        return route.meta.navGroup === link.navGroup;
+      }
+      return isActive;
+    }
+
     function logout() {
       auth.logout();
       closeAllMenus();
@@ -95,7 +99,7 @@ export default {
       document.removeEventListener('touchstart', handleDocumentClick);
     });
 
-    return {auth, navLinks, accountLinks, homePath, userInitial, userLabel, isMenuOpen, isAccountMenuOpen, accountMenuRef, toggleMenu, closeMenu, toggleAccountMenu, closeAccountMenu, closeAllMenus, logout};
+    return {auth, navLinks, accountLinks, homePath, userInitial, userLabel, isMenuOpen, isAccountMenuOpen, accountMenuRef, toggleMenu, closeMenu, toggleAccountMenu, closeAccountMenu, closeAllMenus, isNavLinkActive, logout};
   }
 };
 </script>
@@ -120,7 +124,7 @@ export default {
         <ul class="navbar-nav app-nav-list me-auto mb-3 mb-lg-0">
           <li v-for="link in navLinks" :key="link.to" class="nav-item">
             <RouterLink v-slot="{ href, navigate, isActive }" :to="link.to" custom>
-              <a :href="href" :class="['nav-link app-nav-link', { active: isActive }]" :aria-current="isActive ? 'page' : undefined" @click="navigate">
+              <a :href="href" :class="['nav-link app-nav-link', { active: isNavLinkActive(link, isActive) }]" :aria-current="isActive ? 'page' : undefined" @click="navigate">
                 {{ link.label }}
               </a>
             </RouterLink>

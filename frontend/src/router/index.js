@@ -13,7 +13,6 @@ import EditEventView from '@/views/EditEventView.vue';
 import AdminDashboardView from '@/views/AdminDashboardView.vue';
 import ManageEventsView from '@/views/ManageEventsView.vue';
 import AdminBookingsView from '@/views/AdminBookingsView.vue';
-import ProfileView from '@/views/ProfileView.vue';
 import NotFoundView from '@/views/NotFoundView.vue';
 
 const routes = [
@@ -26,11 +25,11 @@ const routes = [
   { path: '/register', name: 'register', component: RegisterView, meta: { guestOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true, requiresStudent: true } },
   { path: '/history', name: 'history', component: HistoryView, meta: { requiresAuth: true, requiresStudent: true } },
-  { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/events', name: 'admin-events', component: ManageEventsView, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/events/create', name: 'create-event', component: CreateEventView, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/events/:id/edit', name: 'edit-event', component: EditEventView, props: true, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/admin/bookings', name: 'admin-bookings', component: AdminBookingsView, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin',  name: 'admin-dashboard',  component: AdminDashboardView,  meta: { requiresAuth: true, requiresAdmin: true, navGroup: 'admin' } },
+  { path: '/admin/events',  name: 'admin-events',  component: ManageEventsView,  meta: { requiresAuth: true, requiresAdmin: true, navGroup: 'admin' } },
+  { path: '/admin/events/create',  name: 'create-event',  component: CreateEventView,  meta: { requiresAuth: true, requiresAdmin: true, navGroup: 'admin' } },
+  { path: '/admin/events/:id/edit',  name: 'edit-event',  component: EditEventView,  props: true,  meta: { requiresAuth: true, requiresAdmin: true, navGroup: 'admin' } },
+  { path: '/admin/bookings',  name: 'admin-bookings',  component: AdminBookingsView,  meta: { requiresAuth: true, requiresAdmin: true, navGroup: 'admin' } },
   { path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
 ];
