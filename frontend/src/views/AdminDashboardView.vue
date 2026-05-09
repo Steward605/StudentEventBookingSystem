@@ -24,7 +24,7 @@ export default {
       {
         label: 'Sold out events',
         value: stats.value?.soldOutEvents ?? 0,
-        helper: 'No seats remaining',
+        helper: 'Events at full capacity',
         tone: 'warning'
       },
       {
