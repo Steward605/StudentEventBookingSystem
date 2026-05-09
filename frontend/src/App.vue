@@ -6,7 +6,7 @@ import AppFooter from './components/AppFooter.vue';
 import AccessibleToast from './components/AccessibleToast.vue';
 
 export default {
-  components: {AppNavbar, AppFooter, AccessibleToast},
+  components: { AppNavbar, AppFooter, AccessibleToast },
   setup() {
     const route = useRoute();
     const mainContent = ref(null);
@@ -22,6 +22,10 @@ export default {
         }));
     });
 
+    const showGlobalBreadcrumbs = computed(() => {
+      return breadcrumbs.value.length > 1 && !route.meta.hideGlobalBreadcrumbs;
+    });
+
     function resolveBreadcrumbTo(item) {
       if (!item?.to) {
         return null;
@@ -29,6 +33,7 @@ export default {
       if (typeof item.to === 'function') {
         return item.to(route);
       }
+
       return item.to;
     }
 
@@ -37,7 +42,7 @@ export default {
       mainContent.value?.focus({ preventScroll: true });
     });
 
-    return {mainContent, breadcrumbs, resolveBreadcrumbTo};
+    return {mainContent, breadcrumbs, showGlobalBreadcrumbs, resolveBreadcrumbTo};
   }
 };
 </script>
@@ -45,8 +50,9 @@ export default {
 <template>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <AppNavbar />
+
   <main id="main-content" ref="mainContent" class="app-shell" tabindex="-1">
-    <nav v-if="breadcrumbs.length > 1" class="app-breadcrumbs" aria-label="Breadcrumb">
+    <nav v-if="showGlobalBreadcrumbs" class="app-breadcrumbs" aria-label="Breadcrumb">
       <div class="container">
         <ol class="app-breadcrumb-list">
           <li v-for="(item, index) in breadcrumbs" :key="`${item.label}-${index}`" class="app-breadcrumb-item">
@@ -62,6 +68,7 @@ export default {
     </nav>
     <RouterView />
   </main>
+
   <AccessibleToast />
   <AppFooter />
 </template>

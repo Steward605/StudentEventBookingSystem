@@ -15,11 +15,14 @@ import ManageEventsView from '@/views/ManageEventsView.vue';
 import AdminBookingsView from '@/views/AdminBookingsView.vue';
 import ProfileView from '@/views/ProfileView.vue';
 import NotFoundView from '@/views/NotFoundView.vue';
+import AdminLayout from '@/layouts/AdminLayout.vue';
+import AdminUsersView from '@/views/AdminUsersView.vue';
 
 const adminMeta = {
   requiresAuth: true,
   requiresAdmin: true,
-  navGroup: 'admin'
+  navGroup: 'admin',
+  hideGlobalBreadcrumbs: true
 };
 
 const adminDashboardCrumb = {
@@ -60,50 +63,57 @@ const routes = [
   { path: '/register', name: 'register', component: RegisterView, meta: { guestOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true, requiresStudent: true } },
   { path: '/history', name: 'history', component: HistoryView, meta: { requiresAuth: true, requiresStudent: true } },
-  { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView,
-    meta: {
-      ...adminMeta,
-      breadcrumbs: [
-        { label: 'Admin Dashboard' }
-      ]
-    }
-  },
-  { path: '/admin/events', name: 'admin-events', component: ManageEventsView,
-    meta: {
-      ...adminMeta,
-      breadcrumbs: [
-        adminDashboardCrumb,
-        { label: 'Manage events' }
-      ]
-    }
-  },
-  { path: '/admin/events/create', name: 'create-event', component: CreateEventView,
-    meta: {
-      ...adminMeta,
-      breadcrumbs: [
-        adminDashboardCrumb,
-        { label: 'Create event' }
-      ]
-    }
-  },
-  { path: '/admin/events/:id/edit', name: 'edit-event', component: EditEventView, props: true,
-    meta: {
-      ...adminMeta,
-      breadcrumbs: [
-        adminDashboardCrumb,
-        { label: 'Manage events', to: '/admin/events' },
-        { label: 'Edit event' }
-      ]
-    }
-  },
-  { path: '/admin/bookings', name: 'admin-bookings', component: AdminBookingsView,
-    meta: {
-      ...adminMeta,
-      breadcrumbs: [
-        adminDashboardCrumb,
-        { label: 'Bookings' }
-      ]
-    }
+  { path: '/admin', component: AdminLayout, meta: adminMeta,
+    children: [
+      { path: '', name: 'admin-dashboard', component: AdminDashboardView,
+        meta: {
+          breadcrumbs: [
+            { label: 'Admin Dashboard' }
+          ]
+        }
+      },
+      { path: 'events', name: 'admin-events', component: ManageEventsView,
+        meta: {
+          breadcrumbs: [
+            adminDashboardCrumb,
+            { label: 'Manage events' }
+          ]
+        }
+      },
+      { path: 'events/create', name: 'create-event', component: CreateEventView,
+        meta: {
+          breadcrumbs: [
+            adminDashboardCrumb,
+            { label: 'Create event' }
+          ]
+        }
+      },
+      { path: 'events/:id/edit', name: 'edit-event', component: EditEventView, props: true,
+        meta: {
+          breadcrumbs: [
+            adminDashboardCrumb,
+            { label: 'Manage events', to: '/admin/events' },
+            { label: 'Edit event' }
+          ]
+        }
+      },
+      { path: 'bookings', name: 'admin-bookings', component: AdminBookingsView,
+        meta: {
+          breadcrumbs: [
+            adminDashboardCrumb,
+            { label: 'Bookings' }
+          ]
+        }
+      },
+      { path: 'users', name: 'admin-users', component: AdminUsersView,
+        meta: {
+          breadcrumbs: [
+            adminDashboardCrumb,
+            { label: 'Registered users' }
+          ]
+        }
+      }
+    ]
   },
   { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
