@@ -2,9 +2,10 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem('student_event_booking_system_token');
+
   const headers = {
     'Content-Type': 'application/json',
-    ...(options.headers || {})
+    ...options.headers
   };
 
   if (token) {
@@ -16,7 +17,9 @@ export async function apiRequest(path, options = {}) {
     headers
   });
 
-  if (response.status === 204) return null;
+  if (response.status === 204) {
+    return null;
+  }
 
   const data = await response.json().catch(() => ({}));
 
@@ -33,5 +36,6 @@ export const api = {
   get: path => apiRequest(path),
   post: (path, body) => apiRequest(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => apiRequest(path, { method: 'PUT', body: JSON.stringify(body) }),
+  patch: (path, body) => apiRequest(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: path => apiRequest(path, { method: 'DELETE' })
 };

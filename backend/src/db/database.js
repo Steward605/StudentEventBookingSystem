@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const dataDir = path.resolve(__dirname, '../../data');
 const dbFile = process.env.DB_FILE || path.join(dataDir, 'student_event_booking_system.sqlite');
 
@@ -14,6 +15,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 export const db = new Database(dbFile);
+
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -21,6 +23,43 @@ function dateFromToday(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function getColumnNames(tableName) {
+  return db.prepare(`PRAGMA table_info(${tableName})`).all().map(column => column.name);
+}
+
+function ensureColumn(tableName, columnName, definition) {
+  const columns = getColumnNames(tableName);
+
+  if (!columns.includes(columnName)) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
+}
+
+function runMigrations() {
+  ensureColumn('users', 'verification_status', "TEXT NOT NULL DEFAULT 'pending'");
+  ensureColumn('events', 'venue_id', 'INTEGER');
+  ensureColumn('events', 'status', "TEXT NOT NULL DEFAULT 'published'");
+  ensureColumn('events', 'organiser_user_id', 'INTEGER');
+
+  db.prepare(`
+    UPDATE users
+    SET verification_status = 'verified'
+    WHERE role = 'admin'
+  `).run();
+
+  db.prepare(`
+    UPDATE users
+    SET verification_status = 'verified'
+    WHERE email = 'student@email.com'
+  `).run();
+
+  db.prepare(`
+    UPDATE events
+    SET status = 'published'
+    WHERE status IS NULL OR status = ''
+  `).run();
 }
 
 export function initialiseDatabase() {
@@ -33,6 +72,23 @@ export function initialiseDatabase() {
       role TEXT NOT NULL DEFAULT 'student',
       campus TEXT DEFAULT 'Hawthorn',
       interests TEXT DEFAULT '',
+      verification_status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS venues (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      campus TEXT NOT NULL,
+      building TEXT NOT NULL,
+      room TEXT NOT NULL,
+      city TEXT NOT NULL,
+      capacity INTEGER NOT NULL CHECK(capacity > 0),
+      venue_type TEXT NOT NULL,
+      facilities TEXT DEFAULT '',
+      accessibility_notes TEXT DEFAULT '',
+      image_url TEXT DEFAULT '',
+      is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -52,9 +108,14 @@ export function initialiseDatabase() {
       organiser TEXT NOT NULL,
       accessibility_notes TEXT DEFAULT '',
       created_by INTEGER,
+      venue_id INTEGER,
+      status TEXT NOT NULL DEFAULT 'published',
+      organiser_user_id INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL,
+      FOREIGN KEY (organiser_user_id) REFERENCES users(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS bookings (
@@ -72,17 +133,38 @@ export function initialiseDatabase() {
     );
   `);
 
+  runMigrations();
   seedUsers();
+  seedVenues();
   seedEvents();
 }
 
 function seedUsers() {
   const count = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
-  if (count > 0) return;
+
+  if (count > 0) {
+    return;
+  }
 
   const insert = db.prepare(`
-    INSERT INTO users (name, email, password_hash, role, campus, interests)
-    VALUES (@name, @email, @password_hash, @role, @campus, @interests)
+    INSERT INTO users (
+      name,
+      email,
+      password_hash,
+      role,
+      campus,
+      interests,
+      verification_status
+    )
+    VALUES (
+      @name,
+      @email,
+      @password_hash,
+      @role,
+      @campus,
+      @interests,
+      @verification_status
+    )
   `);
 
   const users = [
@@ -92,7 +174,8 @@ function seedUsers() {
       password_hash: bcrypt.hashSync('Admin123!', 10),
       role: 'admin',
       campus: 'Hawthorn',
-      interests: 'Student leadership, technology, design'
+      interests: 'Student leadership, technology, design',
+      verification_status: 'verified'
     },
     {
       name: 'Maya Chen',
@@ -100,7 +183,17 @@ function seedUsers() {
       password_hash: bcrypt.hashSync('Student123!', 10),
       role: 'student',
       campus: 'Sarawak',
-      interests: 'Design, entrepreneurship, community events'
+      interests: 'Design, entrepreneurship, community events',
+      verification_status: 'verified'
+    },
+    {
+      name: 'Daniel Tan',
+      email: 'pending@student.com',
+      password_hash: bcrypt.hashSync('Student123!', 10),
+      role: 'student',
+      campus: 'Sarawak',
+      interests: 'Sports, technology, volunteering',
+      verification_status: 'pending'
     }
   ];
 
@@ -108,18 +201,192 @@ function seedUsers() {
   transaction(users);
 }
 
+function seedVenues() {
+  const count = db.prepare('SELECT COUNT(*) AS count FROM venues').get().count;
+
+  if (count > 0) {
+    return;
+  }
+
+  const insert = db.prepare(`
+    INSERT INTO venues (
+      name,
+      campus,
+      building,
+      room,
+      city,
+      capacity,
+      venue_type,
+      facilities,
+      accessibility_notes,
+      image_url,
+      is_active
+    )
+    VALUES (
+      @name,
+      @campus,
+      @building,
+      @room,
+      @city,
+      @capacity,
+      @venue_type,
+      @facilities,
+      @accessibility_notes,
+      @image_url,
+      1
+    )
+  `);
+
+  const venues = [
+    {
+      name: 'Innovation Studio',
+      campus: 'Sarawak',
+      building: 'ICT Building',
+      room: 'IS-201',
+      city: 'Kuching',
+      capacity: 60,
+      venue_type: 'Workshop room',
+      facilities: 'Projector, whiteboard, movable tables, Wi-Fi',
+      accessibility_notes: 'Lift access and wheelchair-friendly entrance available.',
+      image_url: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Main Auditorium',
+      campus: 'Sarawak',
+      building: 'Student Hub',
+      room: 'AUD-001',
+      city: 'Kuching',
+      capacity: 220,
+      venue_type: 'Auditorium',
+      facilities: 'Stage, projector, sound system, fixed seating',
+      accessibility_notes: 'Wheelchair spaces available near main entrance.',
+      image_url: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Computer Lab 4',
+      campus: 'Sarawak',
+      building: 'ICT Building',
+      room: 'LAB-104',
+      city: 'Kuching',
+      capacity: 40,
+      venue_type: 'Computer lab',
+      facilities: 'Desktop computers, projector, coding software, Wi-Fi',
+      accessibility_notes: 'Accessible by lift. Adjustable desk available on request.',
+      image_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Student Lounge',
+      campus: 'Sarawak',
+      building: 'Student Hub',
+      room: 'SL-110',
+      city: 'Kuching',
+      capacity: 80,
+      venue_type: 'Casual event space',
+      facilities: 'Sofa seating, small stage, portable screen, Wi-Fi',
+      accessibility_notes: 'Ground-floor access available.',
+      image_url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Campus Green',
+      campus: 'Sarawak',
+      building: 'Outdoor Campus Area',
+      room: 'GREEN-01',
+      city: 'Kuching',
+      capacity: 180,
+      venue_type: 'Outdoor space',
+      facilities: 'Open field, portable booth space, outdoor lighting',
+      accessibility_notes: 'Step-free access available from the main campus path.',
+      image_url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Career Hub',
+      campus: 'Sarawak',
+      building: 'Student Services Centre',
+      room: 'CH-205',
+      city: 'Kuching',
+      capacity: 70,
+      venue_type: 'Career event room',
+      facilities: 'Projector, interview booths, presentation screen, Wi-Fi',
+      accessibility_notes: 'Lift access and accessible washroom nearby.',
+      image_url: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Seminar Room B',
+      campus: 'Hawthorn',
+      building: 'Academic Centre',
+      room: 'B-302',
+      city: 'Hawthorn',
+      capacity: 55,
+      venue_type: 'Seminar room',
+      facilities: 'Projector, lectern, hybrid meeting camera, Wi-Fi',
+      accessibility_notes: 'Accessible lift and automatic doors available.',
+      image_url: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Central Courtyard',
+      campus: 'Hawthorn',
+      building: 'Central Campus',
+      room: 'COURT-01',
+      city: 'Hawthorn',
+      capacity: 150,
+      venue_type: 'Outdoor courtyard',
+      facilities: 'Outdoor seating, portable stage area, power access',
+      accessibility_notes: 'Step-free courtyard access available.',
+      image_url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80'
+    }
+  ];
+
+  const transaction = db.transaction(items => items.forEach(venue => insert.run(venue)));
+  transaction(venues);
+}
+
 function seedEvents() {
   const count = db.prepare('SELECT COUNT(*) AS count FROM events').get().count;
-  if (count > 0) return;
+
+  if (count > 0) {
+    return;
+  }
 
   const admin = db.prepare('SELECT id FROM users WHERE role = ? LIMIT 1').get('admin');
+
   const insert = db.prepare(`
     INSERT INTO events (
-      title, category, description, location, city, event_date, start_time, end_time,
-      capacity, price, image_url, organiser, accessibility_notes, created_by
-    ) VALUES (
-      @title, @category, @description, @location, @city, @event_date, @start_time, @end_time,
-      @capacity, @price, @image_url, @organiser, @accessibility_notes, @created_by
+      title,
+      category,
+      description,
+      location,
+      city,
+      event_date,
+      start_time,
+      end_time,
+      capacity,
+      price,
+      image_url,
+      organiser,
+      accessibility_notes,
+      created_by,
+      venue_id,
+      status,
+      organiser_user_id
+    )
+    VALUES (
+      @title,
+      @category,
+      @description,
+      @location,
+      @city,
+      @event_date,
+      @start_time,
+      @end_time,
+      @capacity,
+      @price,
+      @image_url,
+      @organiser,
+      @accessibility_notes,
+      @created_by,
+      @venue_id,
+      @status,
+      @organiser_user_id
     )
   `);
 
@@ -142,7 +409,7 @@ function seedEvents() {
     'Sydney'
   ];
 
-  const venues = [
+  const venueNames = [
     'Innovation Studio',
     'Main Auditorium',
     'Computer Lab 4',
@@ -250,11 +517,18 @@ function seedEvents() {
     'Clinic'
   ];
 
+  const venueRows = db.prepare('SELECT * FROM venues ORDER BY id').all();
+
+  const venueByName = new Map(
+    venueRows.map(venue => [venue.name, venue])
+  );
+
   const events = Array.from({ length: 120 }, (_, index) => {
     const eventNumber = index + 1;
     const category = categories[index % categories.length];
-    const city = cities[index % cities.length];
-    const venue = venues[index % venues.length];
+    const fallbackCity = cities[index % cities.length];
+    const venueName = venueNames[index % venueNames.length];
+    const venue = venueByName.get(venueName) || venueRows[index % venueRows.length] || null;
     const organiser = organisers[index % organisers.length];
     const startHour = 8 + (index % 10);
     const endHour = startHour + 2;
@@ -263,21 +537,28 @@ function seedEvents() {
     const imagePool = categoryImagePools[category] || categoryImagePools.Technology;
     const imageUrl = imagePool[Math.floor(index / categories.length) % imagePool.length];
 
+    const maxVenueCapacity = venue?.capacity || 200;
+    const plannedCapacity = 40 + (index % 160);
+    const capacity = Math.min(plannedCapacity, maxVenueCapacity);
+
     return {
       title: `${theme} ${format}`,
       category,
       description: `A student event designed for testing event browsing, booking, filtering, and pagination. This is seeded event ${eventNumber}.`,
-      location: `${venue}, Room ${100 + eventNumber}`,
-      city,
+      location: venue ? `${venue.name}, ${venue.building} ${venue.room}` : `${venueName}, Room ${100 + eventNumber}`,
+      city: venue?.city || fallbackCity,
       event_date: dateFromToday(3 + index),
       start_time: `${String(startHour).padStart(2, '0')}:00`,
       end_time: `${String(endHour).padStart(2, '0')}:00`,
-      capacity: 40 + (index % 160),
+      capacity,
       price: index % 4 === 0 ? 0 : Number((5 + (index % 25)).toFixed(2)),
       image_url: imageUrl,
       organiser,
-      accessibility_notes: 'Wheelchair accessible venue. Contact organiser for additional accessibility support.',
-      created_by: admin?.id || null
+      accessibility_notes: venue?.accessibility_notes || 'Wheelchair accessible venue. Contact organiser for additional accessibility support.',
+      created_by: admin?.id || null,
+      venue_id: venue?.id || null,
+      status: 'published',
+      organiser_user_id: null
     };
   });
 

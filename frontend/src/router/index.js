@@ -17,6 +17,10 @@ import ProfileView from '@/views/ProfileView.vue';
 import NotFoundView from '@/views/NotFoundView.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import AdminUsersView from '@/views/AdminUsersView.vue';
+import OrganiserDashboardView from '@/views/OrganiserDashboardView.vue';
+import OrganiserCreateEventView from '@/views/OrganiserCreateEventView.vue';
+import OrganiserEditEventView from '@/views/OrganiserEditEventView.vue';
+import OrganiserAttendeesView from '@/views/OrganiserAttendeesView.vue';
 
 const adminMeta = {
   requiresAuth: true,
@@ -24,34 +28,38 @@ const adminMeta = {
   navGroup: 'admin',
   hideGlobalBreadcrumbs: true
 };
-
-const adminDashboardCrumb = {
-  label: 'Admin Dashboard',
-  to: '/admin'
+const adminDashboardCrumb = { label: 'Admin Dashboard', to: '/admin' };
+const organiserMeta = {
+  requiresAuth: true,
+  requiresStudent: true,
+  requiresVerifiedStudent: true,
+  navGroup: 'organiser'
 };
-
+const organiserDashboardCrumb = { label: 'Organiser Dashboard', to: '/organiser' };
 const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/events', name: 'events', component: EventsView },
   { path: '/events/create', redirect: '/admin/events/create' },
-  { path: '/events/:id/book', name: 'booking', component: BookingView, props: true,
+  {
+    path: '/events/:id/book',
+    name: 'booking',
+    component: BookingView,
+    props: true,
     meta: {
       requiresAuth: true,
       requiresStudent: true,
       breadcrumbs: [
         { label: 'Events', to: '/events' },
-        {
-          label: 'Event details',
-          to: route => ({
-            name: 'event-detail',
-            params: { id: route.params.id }
-          })
-        },
+        { label: 'Event details', to: route => ({ name: 'event-detail', params: { id: route.params.id } }) },
         { label: 'Book tickets' }
       ]
     }
   },
-  { path: '/events/:id', name: 'event-detail', component: EventDetailView, props: true,
+  {
+    path: '/events/:id',
+    name: 'event-detail',
+    component: EventDetailView,
+    props: true,
     meta: {
       breadcrumbs: [
         { label: 'Events', to: '/events' },
@@ -63,62 +71,91 @@ const routes = [
   { path: '/register', name: 'register', component: RegisterView, meta: { guestOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true, requiresStudent: true } },
   { path: '/history', name: 'history', component: HistoryView, meta: { requiresAuth: true, requiresStudent: true } },
-  { path: '/admin', component: AdminLayout, meta: adminMeta,
+  {
+    path: '/organiser',
+    name: 'organiser-dashboard',
+    component: OrganiserDashboardView,
+    meta: {
+      ...organiserMeta,
+      breadcrumbs: [{ label: 'Organiser Dashboard' }]
+    }
+  },
+  {
+    path: '/organiser/events/create',
+    name: 'organiser-create-event',
+    component: OrganiserCreateEventView,
+    meta: {
+      ...organiserMeta,
+      breadcrumbs: [organiserDashboardCrumb, { label: 'Create event' }]
+    }
+  },
+  {
+    path: '/organiser/events/:id/edit',
+    name: 'organiser-edit-event',
+    component: OrganiserEditEventView,
+    props: true,
+    meta: {
+      ...organiserMeta,
+      breadcrumbs: [organiserDashboardCrumb, { label: 'Edit event' }]
+    }
+  },
+  {
+    path: '/organiser/events/:id/attendees',
+    name: 'organiser-event-attendees',
+    component: OrganiserAttendeesView,
+    props: true,
+    meta: {
+      ...organiserMeta,
+      breadcrumbs: [organiserDashboardCrumb, { label: 'Attendees' }]
+    }
+  },
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: adminMeta,
     children: [
-      { path: '', name: 'admin-dashboard', component: AdminDashboardView,
-        meta: {
-          breadcrumbs: [
-            { label: 'Admin Dashboard' }
-          ]
-        }
+      {
+        path: '',
+        name: 'admin-dashboard',
+        component: AdminDashboardView,
+        meta: { breadcrumbs: [{ label: 'Admin Dashboard' }] }
       },
-      { path: 'events', name: 'admin-events', component: ManageEventsView,
-        meta: {
-          breadcrumbs: [
-            adminDashboardCrumb,
-            { label: 'Manage events' }
-          ]
-        }
+      {
+        path: 'events',
+        name: 'admin-events',
+        component: ManageEventsView,
+        meta: { breadcrumbs: [adminDashboardCrumb, { label: 'Manage events' }] }
       },
-      { path: 'events/create', name: 'create-event', component: CreateEventView,
-        meta: {
-          breadcrumbs: [
-            adminDashboardCrumb,
-            { label: 'Create event' }
-          ]
-        }
+      {
+        path: 'events/create',
+        name: 'create-event',
+        component: CreateEventView,
+        meta: { breadcrumbs: [adminDashboardCrumb, { label: 'Create event' }] }
       },
-      { path: 'events/:id/edit', name: 'edit-event', component: EditEventView, props: true,
-        meta: {
-          breadcrumbs: [
-            adminDashboardCrumb,
-            { label: 'Manage events', to: '/admin/events' },
-            { label: 'Edit event' }
-          ]
-        }
+      {
+        path: 'events/:id/edit',
+        name: 'edit-event',
+        component: EditEventView,
+        props: true,
+        meta: { breadcrumbs: [adminDashboardCrumb, { label: 'Manage events', to: '/admin/events' }, { label: 'Edit event' }] }
       },
-      { path: 'bookings', name: 'admin-bookings', component: AdminBookingsView,
-        meta: {
-          breadcrumbs: [
-            adminDashboardCrumb,
-            { label: 'Bookings' }
-          ]
-        }
+      {
+        path: 'bookings',
+        name: 'admin-bookings',
+        component: AdminBookingsView,
+        meta: { breadcrumbs: [adminDashboardCrumb, { label: 'Bookings' }] }
       },
-      { path: 'users', name: 'admin-users', component: AdminUsersView,
-        meta: {
-          breadcrumbs: [
-            adminDashboardCrumb,
-            { label: 'Registered users' }
-          ]
-        }
+      {
+        path: 'users',
+        name: 'admin-users',
+        component: AdminUsersView,
+        meta: { breadcrumbs: [adminDashboardCrumb, { label: 'Registered users' }] }
       }
     ]
   },
   { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
 ];
-
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -126,7 +163,6 @@ const router = createRouter({
     return { top: 0 };
   }
 });
-
 router.beforeEach(to => {
   const auth = useAuthStore();
   const roleHome = auth.isAdmin ? { name: 'admin-dashboard' } : { name: 'dashboard' };
@@ -141,6 +177,9 @@ router.beforeEach(to => {
   }
   if (to.meta.requiresStudent && auth.isAdmin) {
     return { name: 'admin-dashboard' };
+  }
+  if (to.meta.requiresVerifiedStudent && !auth.isVerifiedStudent) {
+    return { name: 'dashboard' };
   }
 });
 

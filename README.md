@@ -101,7 +101,26 @@ The database seeds the following accounts automatically when the backend starts 
 | Role | Email | Password |
 |---|---|---|
 | Admin | `admin@email.com` | `Admin123!` |
-| Student | `student@email.com` | `Student123!` |
+| Verified Student | `student@email.com` | `Student123!` |
+| Pending Verification Student | `pending@student.com` | `Student123!` |
+
+Admin can:
+- verify/reject students
+- create/edit/delete public events
+- view all users and bookings
+
+Verified students can:
+- open /organiser
+- create their own events
+- select a venue
+- publish or save as draft
+- edit/cancel only their own events
+- view attendees for their own events
+
+Other students can:
+- browse published events
+- book/join published events
+- not host events until verified
 
 If an older database file already exists, the seed data will not be inserted again. To regenerate the default seed data during development, stop the backend server and delete the local SQLite database files inside `backend/data/`, then restart the backend.
 

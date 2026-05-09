@@ -19,11 +19,14 @@ export default {
           { to: '/events', label: 'Public Events Page' }
         ];
       }
-
-      return [
+      const links = [
         { to: '/', label: 'Home' },
         { to: '/events', label: 'Events' }
       ];
+      if (auth.isVerifiedStudent) {
+        links.push({ to: '/organiser', label: 'Host Events', navGroup: 'organiser' });
+      }
+      return links;
     });
 
     const accountLinks = computed(() => {
@@ -35,33 +38,32 @@ export default {
           { to: '/profile', label: 'Profile Settings' }
         ];
       }
-      return [
+      const links = [
         { to: '/dashboard', label: 'Dashboard' },
-        { to: '/history', label: 'Booking History' },
-        { to: '/profile', label: 'Profile Settings' }
+        { to: '/history', label: 'Booking History' }
       ];
+      if (auth.isVerifiedStudent) {
+        links.push({ to: '/organiser', label: 'My Hosted Events' });
+      }
+      links.push({ to: '/profile', label: 'Profile Settings' });
+      return links;
     });
 
     const homePath = computed(() => auth.isAdmin ? '/admin' : '/');
     const userInitial = computed(() => auth.user?.name?.trim()?.charAt(0)?.toUpperCase() || 'U');
     const userLabel = computed(() => auth.user?.name || 'Signed in user');
-
     function toggleMenu() {
       isMenuOpen.value = !isMenuOpen.value;
     }
-
     function closeMenu() {
       isMenuOpen.value = false;
     }
-
     function toggleAccountMenu() {
       isAccountMenuOpen.value = !isAccountMenuOpen.value;
     }
-
     function closeAccountMenu() {
       isAccountMenuOpen.value = false;
     }
-
     function handleDocumentClick(event) {
       if (!isAccountMenuOpen.value) {
         return;
@@ -76,14 +78,12 @@ export default {
       closeMenu();
       closeAccountMenu();
     }
-
     function isNavLinkActive(link, isActive) {
       if (link.navGroup) {
         return route.meta.navGroup === link.navGroup;
       }
       return isActive;
     }
-
     function logout() {
       auth.logout();
       closeAllMenus();
@@ -110,14 +110,20 @@ export default {
     <div class="container navbar-container">
       <RouterLink class="navbar-brand app-brand" :to="homePath" aria-label="Student Event Booking System home" @click="closeAllMenus">
         <span class="brand-mark">SEB</span>
-
         <span class="brand-copy">
           <strong>Student Event</strong>
           <span>Booking System</span>
         </span>
       </RouterLink>
 
-      <button class="navbar-toggler app-navbar-toggler" type="button" aria-controls="primaryNav" :aria-expanded="isMenuOpen ? 'true' : 'false'" aria-label="Toggle primary navigation" @click="toggleMenu">
+      <button
+        class="navbar-toggler app-navbar-toggler"
+        type="button"
+        aria-controls="primaryNav"
+        :aria-expanded="isMenuOpen ? 'true' : 'false'"
+        aria-label="Toggle primary navigation"
+        @click="toggleMenu"
+      >
         <span class="navbar-toggler-icon"></span>
       </button>
 
@@ -139,12 +145,16 @@ export default {
               <span class="user-name">{{ userLabel }}</span>
               <span class="account-menu-caret" aria-hidden="true">▾</span>
             </button>
+
             <div v-if="isAccountMenuOpen" class="account-dropdown" role="menu">
               <p class="account-dropdown-kicker">Account menu</p>
+
               <RouterLink v-for="link in accountLinks" :key="link.to" class="account-dropdown-item" :to="link.to" role="menuitem" @click="closeAllMenus">
                 {{ link.label }}
               </RouterLink>
+
               <div class="account-dropdown-divider"></div>
+
               <button class="account-dropdown-item account-dropdown-danger" type="button" role="menuitem" @click="logout">
                 Log out
               </button>
@@ -152,8 +162,13 @@ export default {
           </div>
 
           <template v-else>
-            <RouterLink class="btn btn-outline-primary btn-sm btn-pill" to="/login" @click="closeAllMenus">Log in</RouterLink>
-            <RouterLink class="btn btn-primary btn-sm btn-pill" to="/register" @click="closeAllMenus">Register</RouterLink>
+            <RouterLink class="btn btn-outline-primary btn-sm btn-pill" to="/login" @click="closeAllMenus">
+              Log in
+            </RouterLink>
+
+            <RouterLink class="btn btn-primary btn-sm btn-pill" to="/register" @click="closeAllMenus">
+              Register
+            </RouterLink>
           </template>
         </div>
       </div>

@@ -1,14 +1,24 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
+
 import { api } from '@/services/api';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('student_event_booking_system_user') || 'null'));
   const token = ref(localStorage.getItem('student_event_booking_system_token') || '');
   const message = ref('');
-
   const isAuthenticated = computed(() => Boolean(token.value && user.value));
   const isAdmin = computed(() => user.value?.role === 'admin');
+  const isStudent = computed(() => user.value?.role === 'student');
+  const isVerifiedStudent = computed(() => {
+    return user.value?.role === 'student' && user.value?.verification_status === 'verified';
+  });
+  const isPendingVerification = computed(() => {
+    return user.value?.role === 'student' && user.value?.verification_status === 'pending';
+  });
+  const isRejectedVerification = computed(() => {
+    return user.value?.role === 'student' && user.value?.verification_status === 'rejected';
+  });
 
   function persist(authPayload) {
     user.value = authPayload.user;
@@ -26,11 +36,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(payload) {
     const data = await api.post('/auth/register', payload);
     persist(data);
-    message.value = `Account created for ${data.user.name}.`;
+    message.value = `Account created for ${data.user.name}. Your student account is pending verification before you can host events.`;
   }
 
   async function refreshProfile() {
-    if (!token.value) return;
+    if (!token.value) {
+      return;
+    }
     const data = await api.get('/users/me');
     user.value = data.user;
     localStorage.setItem('student_event_booking_system_user', JSON.stringify(data.user));
@@ -55,17 +67,5 @@ export const useAuthStore = defineStore('auth', () => {
     message.value = '';
   }
 
-  return {
-    user,
-    token,
-    message,
-    isAuthenticated,
-    isAdmin,
-    login,
-    register,
-    refreshProfile,
-    updateProfile,
-    logout,
-    clearMessage
-  };
+  return {user, token, message, isAuthenticated, isAdmin, isStudent, isVerifiedStudent, isPendingVerification, isRejectedVerification, login, register, refreshProfile, updateProfile, logout, clearMessage};
 });

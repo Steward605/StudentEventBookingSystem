@@ -7,9 +7,24 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is missing. Create backend/.env from backend/.env.example and set JWT_SECRET.');
 }
 
+const publicUserColumns = `
+  id,
+  name,
+  email,
+  role,
+  campus,
+  interests,
+  verification_status
+`;
+
 export function createToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      verification_status: user.verification_status
+    },
     JWT_SECRET,
     { expiresIn: '8h' }
   );
@@ -25,20 +40,65 @@ export function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT id, name, email, role, campus, interests FROM users WHERE id = ?').get(payload.id);
+    const user = db.prepare(`SELECT ${publicUserColumns} FROM users WHERE id = ?`).get(payload.id);
+
     if (!user) {
       return res.status(401).json({ message: 'User no longer exists.' });
     }
+
     req.user = user;
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({ message: 'Invalid or expired authentication token.' });
   }
+}
+
+export function optionalAuth(req, res, next) {
+  const header = req.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : null;
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    const user = db.prepare(`SELECT ${publicUserColumns} FROM users WHERE id = ?`).get(payload.id);
+
+    if (user) {
+      req.user = user;
+    }
+  } catch {
+    req.user = null;
+  }
+
+  next();
 }
 
 export function requireAdmin(req, res, next) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ message: 'Admin permission is required.' });
   }
+
+  next();
+}
+
+export function requireStudent(req, res, next) {
+  if (req.user?.role !== 'student') {
+    return res.status(403).json({ message: 'Student permission is required.' });
+  }
+
+  next();
+}
+
+export function requireVerifiedStudent(req, res, next) {
+  if (req.user?.role !== 'student') {
+    return res.status(403).json({ message: 'Only student accounts can use organiser tools.' });
+  }
+
+  if (req.user?.verification_status !== 'verified') {
+    return res.status(403).json({ message: 'Your student account must be verified before hosting events.' });
+  }
+
   next();
 }

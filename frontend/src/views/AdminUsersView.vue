@@ -10,55 +10,42 @@ export default {
     LoadingState,
     EmptyState
   },
-
   setup() {
     const users = ref([]);
     const loading = ref(true);
+    const updatingUserId = ref(null);
     const error = ref('');
+    const success = ref('');
     const searchText = ref('');
     const roleFilter = ref('all');
-
+    const verificationFilter = ref('all');
     const summaryRows = computed(() => {
       const totalUsers = users.value.length;
       const totalStudents = users.value.filter(user => user.role === 'student').length;
       const totalAdmins = users.value.filter(user => user.role === 'admin').length;
-      const confirmedTickets = users.value.reduce((sum, user) => {
-        return sum + Number(user.confirmed_tickets || 0);
-      }, 0);
-
+      const verifiedStudents = users.value.filter(user => user.role === 'student' && user.verification_status === 'verified').length;
       return [
-        {
-          label: 'All users',
-          value: totalUsers
-        },
-        {
-          label: 'Students',
-          value: totalStudents
-        },
-        {
-          label: 'Admins',
-          value: totalAdmins
-        },
-        {
-          label: 'Confirmed tickets',
-          value: confirmedTickets
-        }
+        { label: 'All users', value: totalUsers },
+        { label: 'Students', value: totalStudents },
+        { label: 'Admins', value: totalAdmins },
+        { label: 'Verified students', value: verifiedStudents }
       ];
     });
-
     const filteredUsers = computed(() => {
       const search = searchText.value.trim().toLowerCase();
       return users.value.filter(user => {
         const matchesRole = roleFilter.value === 'all' || user.role === roleFilter.value;
+        const matchesVerification = verificationFilter.value === 'all' || user.verification_status === verificationFilter.value;
         const searchableContent = [
           user.name,
           user.email,
           user.role,
           user.campus,
-          user.interests
+          user.interests,
+          user.verification_status
         ].join(' ').toLowerCase();
         const matchesSearch = !search || searchableContent.includes(search);
-        return matchesRole && matchesSearch;
+        return matchesRole && matchesVerification && matchesSearch;
       });
     });
 
@@ -69,6 +56,16 @@ export default {
       return 'seat-status-success';
     }
 
+    function verificationClass(status) {
+      if (status === 'verified') {
+        return 'seat-status-success';
+      }
+      if (status === 'rejected') {
+        return 'seat-status-danger';
+      }
+      return 'seat-status-warning';
+    }
+
     function formatJoinedDate(dateValue) {
       if (!dateValue) {
         return 'Not available';
@@ -76,7 +73,9 @@ export default {
       return formatDate(dateValue);
     }
 
-    onMounted(async () => {
+    async function loadUsers() {
+      loading.value = true;
+      error.value = '';
       try {
         const data = await api.get('/users/all');
         users.value = data.users || [];
@@ -85,9 +84,36 @@ export default {
       } finally {
         loading.value = false;
       }
-    });
+    }
 
-    return {users, loading, error, searchText, roleFilter, summaryRows, filteredUsers, roleClass, formatJoinedDate};
+    async function updateVerification(user, verificationStatus) {
+      updatingUserId.value = user.id;
+      error.value = '';
+      success.value = '';
+      try {
+        const data = await api.patch(`/users/${user.id}/verification`, {
+          verification_status: verificationStatus
+        });
+        users.value = users.value.map(currentUser => {
+          if (currentUser.id !== user.id) {
+            return currentUser;
+          }
+          return {
+            ...currentUser,
+            ...data.user
+          };
+        });
+        success.value = `${user.name} is now marked as ${verificationStatus}.`;
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        updatingUserId.value = null;
+      }
+    }
+
+    onMounted(loadUsers);
+
+    return {users, loading, updatingUserId, error, success, searchText, roleFilter, verificationFilter, summaryRows, filteredUsers, roleClass, verificationClass, formatJoinedDate, updateVerification};
   }
 };
 </script>
@@ -102,13 +128,17 @@ export default {
           <p class="text-primary fw-semibold mb-2">User management</p>
           <h1 class="display-6 fw-bold mb-2">Registered users</h1>
           <p class="text-muted mb-0">
-            View all user accounts registered to the Student Event Booking System.
+            Verify student accounts before allowing them to host events and book venues.
           </p>
         </div>
       </header>
 
       <div v-if="error" class="alert alert-danger" role="alert">
         {{ error }}
+      </div>
+
+      <div v-if="success" class="alert alert-success" role="status">
+        {{ success }}
       </div>
 
       <section class="row g-3 mb-4" aria-label="Registered user summary">
@@ -133,18 +163,29 @@ export default {
             <label class="form-label fw-semibold" for="admin-user-search">
               Search users
             </label>
-            <input id="admin-user-search" v-model="searchText" class="form-control" type="search" placeholder="Search by name, email, role, campus, or interests"/>
+            <input id="admin-user-search" v-model="searchText" class="form-control" type="search" placeholder="Search by name, email, role, campus, interests, or verification"/>
           </div>
 
           <div>
             <label class="form-label fw-semibold" for="admin-role-filter">
               Filter by role
             </label>
-
             <select id="admin-role-filter" v-model="roleFilter" class="form-select">
               <option value="all">All roles</option>
               <option value="student">Students</option>
               <option value="admin">Admins</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label fw-semibold" for="admin-verification-filter">
+              Filter by verification
+            </label>
+            <select id="admin-verification-filter" v-model="verificationFilter" class="form-select">
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="verified">Verified</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
         </div>
@@ -152,7 +193,7 @@ export default {
         <EmptyState
           v-if="filteredUsers.length === 0"
           title="No users found"
-          message="Try changing the search term or role filter."
+          message="Try changing the search term, role filter, or verification filter."
         />
 
         <div v-else class="admin-table-wrap">
@@ -161,10 +202,12 @@ export default {
               <tr>
                 <th scope="col">User</th>
                 <th scope="col">Role</th>
+                <th scope="col">Verification</th>
                 <th scope="col">Campus</th>
                 <th scope="col">Bookings</th>
-                <th scope="col">Confirmed tickets</th>
+                <th scope="col">Hosted events</th>
                 <th scope="col">Registered</th>
+                <th scope="col" class="text-end">Actions</th>
               </tr>
             </thead>
 
@@ -174,15 +217,43 @@ export default {
                   <div class="fw-bold">{{ user.name }}</div>
                   <div class="text-muted small">{{ user.email }}</div>
                 </td>
+
                 <td>
                   <span :class="['seat-status', roleClass(user.role)]">
                     {{ user.role }}
                   </span>
                 </td>
+
+                <td>
+                  <span :class="['seat-status', verificationClass(user.verification_status)]">
+                    {{ user.verification_status }}
+                  </span>
+                </td>
+
                 <td>{{ user.campus || 'Not set' }}</td>
                 <td>{{ user.booking_count }}</td>
-                <td>{{ user.confirmed_tickets }}</td>
+                <td>{{ user.hosted_event_count || 0 }}</td>
                 <td>{{ formatJoinedDate(user.created_at) }}</td>
+
+                <td class="text-end">
+                  <div v-if="user.role === 'student'" class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-success" type="button" :disabled="updatingUserId === user.id || user.verification_status === 'verified'" @click="updateVerification(user, 'verified')">
+                      Verify
+                    </button>
+
+                    <button class="btn btn-outline-warning" type="button" :disabled="updatingUserId === user.id || user.verification_status === 'pending'" @click="updateVerification(user, 'pending')">
+                      Pending
+                    </button>
+
+                    <button class="btn btn-outline-danger" type="button" :disabled="updatingUserId === user.id || user.verification_status === 'rejected'" @click="updateVerification(user, 'rejected')">
+                      Reject
+                    </button>
+                  </div>
+
+                  <span v-else class="text-muted small">
+                    Admin
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>

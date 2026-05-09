@@ -529,6 +529,66 @@ textarea {
   box-shadow: var(--eh-shadow-sm);
 }
 
+.event-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.9fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.event-detail-main,
+.event-detail-sidebar {
+  min-width: 0;
+}
+
+.event-detail-sidebar {
+  position: sticky;
+  top: 6rem;
+}
+
+.detail-list-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.detail-list-row dd {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.detail-list-row-wide {
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+}
+
+.detail-list-row-wide dd {
+  text-align: left;
+}
+
+@media (max-width: 991.98px) {
+  .event-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .event-detail-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .detail-list-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .detail-list-row dd {
+    text-align: left;
+  }
+}
+
 .badge-soft {
   background: rgba(49, 94, 251, 0.1);
   color: var(--eh-primary-dark);

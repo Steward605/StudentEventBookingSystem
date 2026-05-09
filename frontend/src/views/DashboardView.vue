@@ -16,17 +16,13 @@ export default {
     const stats = ref(null);
     const loading = ref(true);
     const error = ref('');
-
     const confirmedBookings = computed(() => bookingStore.bookings.filter(booking => booking.status === 'confirmed'));
-
     const upcomingBookings = computed(() => {
       return [...confirmedBookings.value]
         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
         .slice(0, 3);
     });
-
     const totalTickets = computed(() => confirmedBookings.value.reduce((sum, booking) => sum + Number(booking.ticket_count || 0), 0));
-
     const statsCards = computed(() => [
       {label: 'My bookings', value: stats.value?.myBookings ?? confirmedBookings.value.length, helper: 'Confirmed bookings'},
       {label: 'My tickets', value: stats.value?.myTickets ?? totalTickets.value, helper: 'Total confirmed tickets'},
@@ -85,6 +81,19 @@ export default {
           <RouterLink class="btn btn-outline-primary btn-pill" to="/history">View history</RouterLink>
         </div>
       </header>
+
+      <div v-if="auth.isPendingVerification" class="alert alert-info" role="status">
+        Your student account is pending verification. Once an admin verifies your account, you can host events and reserve venues.
+      </div>
+
+      <div v-else-if="auth.isRejectedVerification" class="alert alert-warning" role="status">
+        Your organiser verification was rejected. You can still book events, but you cannot host events or reserve venues.
+      </div>
+
+      <div v-else-if="auth.isVerifiedStudent" class="alert alert-success" role="status">
+        Your student account is verified. You can now host events and reserve venues.
+        <RouterLink class="alert-link" to="/organiser">Open organiser dashboard</RouterLink>.
+      </div>
 
       <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
 

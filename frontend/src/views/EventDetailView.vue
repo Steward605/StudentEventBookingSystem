@@ -119,8 +119,8 @@ export default {
       <RouterLink class="btn btn-primary btn-pill" to="/events">Back to events</RouterLink>
     </section>
 
-    <article v-else-if="event" class="row g-4 align-items-start">
-      <div class="col-lg-7">
+    <article v-else-if="event" class="event-detail-layout">
+      <div class="event-detail-main">
         <div class="detail-media-card mb-4">
           <img :src="imageSource" :alt="imageAlt" class="event-detail-image" loading="eager" @error="useFallbackImage" />
           <span class="detail-category-badge">{{ event.category }}</span>
@@ -143,7 +143,7 @@ export default {
         </section>
       </div>
 
-      <div class="col-lg-5">
+      <div class="event-detail-sidebar">
         <aside class="event-detail-panel" aria-labelledby="event-details-title">
           <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
             <div>
@@ -154,7 +154,7 @@ export default {
           </div>
 
           <dl class="detail-list">
-            <div v-for="row in detailRows" :key="row.label" class="detail-list-row">
+            <div v-for="row in detailRows" :key="row.label" :class="['detail-list-row', { 'detail-list-row-wide': row.label === 'Location' }]">
               <dt>{{ row.label }}</dt>
               <dd>{{ row.value }}</dd>
             </div>

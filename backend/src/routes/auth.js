@@ -1,10 +1,21 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+
 import { db } from '../db/database.js';
 import { createToken } from '../middleware/auth.js';
 import { requiredEmail, requiredString } from '../utils/validators.js';
 
 const router = express.Router();
+
+const publicUserColumns = `
+  id,
+  name,
+  email,
+  role,
+  campus,
+  interests,
+  verification_status
+`;
 
 router.post('/register', (req, res, next) => {
   try {
@@ -19,17 +30,28 @@ router.post('/register', (req, res, next) => {
     }
 
     const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+
     if (existing) {
       return res.status(409).json({ message: 'An account with this email already exists.' });
     }
 
     const password_hash = bcrypt.hashSync(password, 10);
+
     const result = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role, campus, interests)
-      VALUES (?, ?, ?, 'student', ?, ?)
+      INSERT INTO users (
+        name,
+        email,
+        password_hash,
+        role,
+        campus,
+        interests,
+        verification_status
+      )
+      VALUES (?, ?, ?, 'student', ?, ?, 'pending')
     `).run(name, email, password_hash, campus, interests);
 
-    const user = db.prepare('SELECT id, name, email, role, campus, interests FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const user = db.prepare(`SELECT ${publicUserColumns} FROM users WHERE id = ?`).get(result.lastInsertRowid);
+
     res.status(201).json({ user, token: createToken(user) });
   } catch (error) {
     next(error);
@@ -52,7 +74,8 @@ router.post('/login', (req, res, next) => {
       email: userRecord.email,
       role: userRecord.role,
       campus: userRecord.campus,
-      interests: userRecord.interests
+      interests: userRecord.interests,
+      verification_status: userRecord.verification_status
     };
 
     res.json({ user, token: createToken(user) });
@@ -60,5 +83,4 @@ router.post('/login', (req, res, next) => {
     next(error);
   }
 });
-
 export default router;
