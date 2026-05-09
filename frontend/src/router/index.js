@@ -40,7 +40,6 @@ const routes = [
   { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView,
     meta: {
       ...adminMeta,
-      breadcrumb: 'Admin Dashboard',
       breadcrumbs: [
         { label: 'Admin Dashboard' }
       ]
@@ -49,7 +48,6 @@ const routes = [
   { path: '/admin/events', name: 'admin-events', component: ManageEventsView,
     meta: {
       ...adminMeta,
-      breadcrumb: 'Manage events',
       breadcrumbs: [
         adminDashboardCrumb,
         { label: 'Manage events' }
@@ -59,18 +57,15 @@ const routes = [
   { path: '/admin/events/create', name: 'create-event', component: CreateEventView,
     meta: {
       ...adminMeta,
-      breadcrumb: 'Create event',
       breadcrumbs: [
         adminDashboardCrumb,
         { label: 'Create event' }
       ]
     }
   },
-
   { path: '/admin/events/:id/edit', name: 'edit-event', component: EditEventView, props: true,
     meta: {
       ...adminMeta,
-      breadcrumb: 'Edit event',
       breadcrumbs: [
         adminDashboardCrumb,
         { label: 'Manage events', to: '/admin/events' },
@@ -78,11 +73,9 @@ const routes = [
       ]
     }
   },
-
   { path: '/admin/bookings', name: 'admin-bookings', component: AdminBookingsView,
     meta: {
       ...adminMeta,
-      breadcrumb: 'Bookings',
       breadcrumbs: [
         adminDashboardCrumb,
         { label: 'Bookings' }
@@ -104,7 +97,6 @@ const router = createRouter({
 router.beforeEach(to => {
   const auth = useAuthStore();
   const roleHome = auth.isAdmin ? { name: 'admin-dashboard' } : { name: 'dashboard' };
-
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } };
   }
