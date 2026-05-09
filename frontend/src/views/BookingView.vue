@@ -132,15 +132,6 @@ export default {
 
 <template>
   <div class="container section-pad booking-page">
-    <nav class="app-breadcrumb mb-4" aria-label="Breadcrumb">
-      <RouterLink to="/events">Events</RouterLink>
-      <span aria-hidden="true">/</span>
-      <RouterLink v-if="event" :to="`/events/${event.id}`">Event details</RouterLink>
-      <span v-else>Event details</span>
-      <span aria-hidden="true">/</span>
-      <span>Book tickets</span>
-    </nav>
-
     <LoadingState v-if="loading" />
 
     <section v-else-if="error && !event" class="error-panel" aria-labelledby="booking-error-title">

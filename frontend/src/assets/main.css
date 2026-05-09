@@ -93,6 +93,62 @@ textarea {
   width: min(100% - 2rem, var(--eh-container));
 }
 
+.app-breadcrumbs {
+  padding-top: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.app-breadcrumb-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--eh-ink-soft);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.app-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.app-breadcrumb-item:not(:last-child)::after {
+  content: '/';
+  color: var(--eh-ink-muted);
+  font-weight: 700;
+}
+
+.app-breadcrumb-link {
+  color: var(--eh-primary);
+  text-decoration: none;
+}
+
+.app-breadcrumb-link:hover,
+.app-breadcrumb-link:focus-visible {
+  color: var(--eh-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
+.app-breadcrumb-current {
+  color: var(--eh-ink-soft);
+}
+
+@media (max-width: 575.98px) {
+  .app-breadcrumbs {
+    padding-top: 0.75rem;
+  }
+
+  .app-breadcrumb-list {
+    font-size: 0.86rem;
+  }
+}
+
 .skip-link {
   position: fixed;
   top: 0.75rem;

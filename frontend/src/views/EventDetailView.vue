@@ -111,12 +111,6 @@ export default {
 
 <template>
   <div class="container section-pad event-detail-page">
-    <nav class="app-breadcrumb mb-4" aria-label="Breadcrumb">
-      <RouterLink to="/events">Events</RouterLink>
-      <span aria-hidden="true">/</span>
-      <span>Event details</span>
-    </nav>
-
     <LoadingState v-if="loading" />
 
     <section v-else-if="error" class="error-panel" aria-labelledby="event-error-title">

@@ -31,8 +31,31 @@ const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/events', name: 'events', component: EventsView },
   { path: '/events/create', redirect: '/admin/events/create' },
-  { path: '/events/:id/book', name: 'booking', component: BookingView, props: true, meta: { requiresAuth: true, requiresStudent: true } },
-  { path: '/events/:id', name: 'event-detail', component: EventDetailView, props: true },
+  { path: '/events/:id/book', name: 'booking', component: BookingView, props: true,
+    meta: {
+      requiresAuth: true,
+      requiresStudent: true,
+      breadcrumbs: [
+        { label: 'Events', to: '/events' },
+        {
+          label: 'Event details',
+          to: route => ({
+            name: 'event-detail',
+            params: { id: route.params.id }
+          })
+        },
+        { label: 'Book tickets' }
+      ]
+    }
+  },
+  { path: '/events/:id', name: 'event-detail', component: EventDetailView, props: true,
+    meta: {
+      breadcrumbs: [
+        { label: 'Events', to: '/events' },
+        { label: 'Event details' }
+      ]
+    }
+  },
   { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
   { path: '/register', name: 'register', component: RegisterView, meta: { guestOnly: true } },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true, requiresStudent: true } },
