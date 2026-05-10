@@ -2726,6 +2726,8 @@ body.modal-open {
   margin: 0 auto;
   padding: 1.5rem 0 3rem;
   align-items: start;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .admin-sidebar {
@@ -2734,7 +2736,6 @@ body.modal-open {
   z-index: 10;
   align-self: start;
 }
-
 .admin-sidebar-card {
   border: 1px solid rgba(217, 224, 236, 0.9);
   border-radius: var(--eh-radius-lg);
@@ -2822,6 +2823,7 @@ body.modal-open {
 
 .admin-layout-main {
   min-width: 0;
+  overflow-x: hidden;
 }
 
 .admin-layout-main .container {
@@ -3063,10 +3065,11 @@ body.modal-open {
     overflow-x: auto;
     padding: 0.15rem 0 0.35rem;
     scroll-snap-type: x mandatory;
+    max-width: 100%;
   }
 
   .admin-sidebar-link {
-    min-width: 12.25rem;
+    min-width: 10rem;
     scroll-snap-align: start;
   }
 
@@ -3232,5 +3235,164 @@ body.modal-open {
 
   .admin-form-actions .btn {
     width: 100%;
+  }
+}
+
+.admin-layout-shell,
+.admin-layout-main,
+.admin-content-page,
+.admin-sidebar,
+.admin-sidebar-card,
+.admin-panel,
+.admin-booking-main,
+.admin-booking-meta div,
+.admin-system-row dt,
+.admin-system-row dd {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-content-page {
+  width: 100%;
+}
+
+.admin-sidebar-card {
+  overflow: hidden;
+}
+
+.admin-sidebar-nav {
+  min-width: 0;
+}
+
+.admin-booking-title-row h3,
+.admin-booking-reference strong,
+.admin-system-row dd {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 1199.98px) {
+  .admin-layout-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    width: min(100% - 1.25rem, 1320px);
+    overflow-x: hidden;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+  }
+
+  .admin-sidebar-card {
+    width: 100%;
+  }
+
+  .admin-sidebar-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.6rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.15rem 0.1rem 0.45rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-sidebar-link {
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
+  }
+
+  .admin-layout-main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .admin-layout-shell {
+    width: min(100% - 1rem, 1320px);
+    padding-top: 0.85rem;
+    padding-bottom: 2rem;
+  }
+
+  .admin-page-header,
+  .admin-panel-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+  }
+
+  .admin-page-header h1 {
+    font-size: clamp(1.85rem, 9vw, 2.35rem);
+    line-height: 1.08;
+  }
+
+  .admin-panel {
+    padding: 1rem;
+    border-radius: var(--eh-radius);
+  }
+
+  .admin-panel-header .btn,
+  .admin-page-actions .btn {
+    width: 100%;
+  }
+
+  .admin-booking-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 0.9rem;
+  }
+
+  .admin-booking-meta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.7rem;
+  }
+
+  .admin-booking-reference {
+    text-align: left;
+  }
+
+  .admin-system-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+    align-items: start;
+  }
+
+  .admin-system-row dd {
+    text-align: left;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-layout-shell {
+    width: min(100% - 0.75rem, 1320px);
+    gap: 0.75rem;
+  }
+
+  .admin-sidebar-card,
+  .admin-panel {
+    border-radius: 1rem;
+  }
+
+  .admin-sidebar-link {
+    min-height: 2.6rem;
+    padding: 0.62rem 0.75rem;
+    font-size: 0.92rem;
+  }
+
+  .admin-booking-title-row {
+    gap: 0.55rem;
+  }
+
+  .admin-booking-title-row h3 {
+    font-size: 1.05rem;
+  }
+
+  .admin-system-row {
+    padding: 0.75rem 0;
   }
 }
