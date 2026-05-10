@@ -15,11 +15,6 @@ frontend/.env.*
 backend/.env
 backend/.env.*
 
-# Keep example env files if you create them
-!.env.example
-!frontend/.env.example
-!backend/.env.example
-
 # Logs
 *.log
 npm-debug.log*
@@ -46,20 +41,14 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Capacitor / Android generated files
-android/.gradle/
-android/local.properties
-android/**/build/
-android/**/.cxx/
-android/.idea/
-android/*.iml
-android/captures/
-android/.externalNativeBuild/
+# Capacitor native platforms generated locally
+android/
+ios/
 
 # Android output packages
 *.apk
 *.aab
 
-# Android signing keys - never commit these
+# Android signing keys
 *.jks
 *.keystore
