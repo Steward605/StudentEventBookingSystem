@@ -1,0 +1,5 @@
+{
+  "appId": "com.cos30043.bookingsys",
+  "appName": "StudentEventBookingSystem",
+  "webDir": "frontend/dist"
+}
