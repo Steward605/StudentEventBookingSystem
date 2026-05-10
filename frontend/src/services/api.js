@@ -1,3 +1,6 @@
+import { useAuthStore } from '@/stores/authStore';
+import router from '@/router';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export async function apiRequest(path, options = {}) {
@@ -24,6 +27,13 @@ export async function apiRequest(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    // Handle expired or invalid token (401 Unauthorized)
+    if (response.status === 401) {
+      const authStore = useAuthStore();
+      authStore.logout();
+      router.push('/login');
+    }
+
     const error = new Error(data.message || 'Request failed.');
     error.status = response.status;
     throw error;

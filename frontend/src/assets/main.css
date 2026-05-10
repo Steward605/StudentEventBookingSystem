@@ -185,9 +185,21 @@ textarea {
 }
 
 .navbar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   padding-top: 0.7rem;
   padding-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 575.98px) {
+  .navbar-container {
+    gap: 0.65rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
 }
 
 .app-brand {
@@ -276,6 +288,20 @@ textarea {
   flex-direction: column;
   gap: 0.65rem;
   align-items: stretch;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 991.98px) {
+  .nav-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .nav-actions {
+    gap: 0.45rem;
+  }
 }
 
 .user-chip {
@@ -309,6 +335,12 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  .user-name {
+    max-width: 8rem;
+  }
 }
 
 .hero {
@@ -467,9 +499,16 @@ textarea {
 
 .event-meta-row {
   display: grid;
-  grid-template-columns: 4.2rem 1fr;
+  grid-template-columns: minmax(auto, 5rem) 1fr;
   gap: 0.6rem;
   align-items: baseline;
+}
+
+@media (max-width: 575.98px) {
+  .event-meta-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
 }
 
 .event-meta dt {
@@ -531,9 +570,16 @@ textarea {
 
 .event-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.9fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
   gap: 1.5rem;
   align-items: start;
+}
+
+@media (max-width: 991.98px) {
+  .event-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
 }
 
 .event-detail-main,
@@ -1063,6 +1109,13 @@ textarea {
   margin-bottom: 1rem;
 }
 
+@media (max-width: 575.98px) {
+  .filter-panel-header {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
 .filter-panel.is-collapsed {
   padding-bottom: 0.75rem;
 }
@@ -1276,6 +1329,13 @@ textarea {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .detail-section-heading {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 }
 
 .event-detail-panel {
@@ -1635,6 +1695,13 @@ textarea {
   background: var(--eh-bg-elevated);
 }
 
+@media (max-width: 767.98px) {
+  .dashboard-booking-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .dashboard-booking-actions {
   display: grid;
   justify-items: end;
@@ -1655,6 +1722,17 @@ textarea {
   gap: 1rem;
   padding: 0.9rem 0;
   border-top: 1px solid var(--eh-border-soft);
+}
+
+@media (max-width: 575.98px) {
+  .account-snapshot-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+
+  .account-snapshot-row dd {
+    text-align: left;
+  }
 }
 
 .account-snapshot-row:first-child {
@@ -1729,6 +1807,18 @@ textarea {
   border-radius: var(--eh-radius-lg);
   background: #ffffff;
   box-shadow: var(--eh-shadow-sm);
+}
+
+@media (max-width: 991.98px) {
+  .history-card {
+    grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .history-card {
+    grid-template-columns: 1fr;
+  }
 }
 
 .history-thumbnail {
@@ -2004,6 +2094,20 @@ textarea {
   margin-bottom: 1.25rem;
 }
 
+@media (max-width: 767.98px) {
+  .admin-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-panel-header {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+}
+
 .admin-booking-list {
   display: grid;
   gap: 1rem;
@@ -2179,10 +2283,31 @@ textarea {
   gap: 1.5rem;
 }
 
+@media (max-width: 767.98px) {
+  .admin-management-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+}
+
 .admin-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+}
+
+@media (max-width: 1199.98px) {
+  .admin-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }
 
 .admin-summary-card {
@@ -2250,6 +2375,13 @@ textarea {
   box-shadow: var(--eh-shadow-sm);
 }
 
+@media (max-width: 991.98px) {
+  .admin-record-card {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
 .admin-record-main {
   min-width: 0;
 }
@@ -2267,6 +2399,24 @@ textarea {
   gap: 0.85rem;
   margin: 0;
   padding: 0;
+}
+
+@media (max-width: 1199.98px) {
+  .admin-record-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991.98px) {
+  .admin-record-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-record-meta {
+    grid-template-columns: 1fr;
+  }
 }
 
 .admin-record-meta div {
@@ -2622,6 +2772,15 @@ body.modal-open {
 .admin-sidebar-nav {
   display: grid;
   gap: 0.45rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+@supports (scrollbar-width: thin) {
+  .admin-sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(49, 94, 251, 0.3) transparent;
+  }
 }
 
 .admin-sidebar-link {
