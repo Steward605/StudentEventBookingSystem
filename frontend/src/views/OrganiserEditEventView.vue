@@ -78,7 +78,6 @@ export default {
     <div v-else>
       <header class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-4">
         <div>
-          <p class="text-primary fw-semibold mb-2">Student organiser</p>
           <h1 class="display-6 fw-bold mb-2">Edit hosted event</h1>
           <p class="text-muted mb-0">
             Update the details, venue, schedule, or publishing status of your event.

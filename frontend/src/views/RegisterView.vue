@@ -74,7 +74,7 @@ export default {
                 <label for="password" class="form-label">Password</label>
                 <input id="password" v-model="form.password" type="password" class="form-control" minlength="8" required autocomplete="new-password" />
               </div>
-              <div class="col-md-6">
+              <div class="col-12">
                 <label for="confirmPassword" class="form-label">Confirm password</label>
                 <input id="confirmPassword" v-model="form.confirmPassword" type="password" class="form-control" :class="{ 'is-valid': showPasswordMatch, 'is-invalid': showPasswordMismatch }" minlength="8" required autocomplete="new-password" aria-describedby="confirmPasswordFeedback" :aria-invalid="showPasswordMismatch ? 'true' : 'false'"/>
                 <div v-if="showPasswordMatch" id="confirmPasswordFeedback" class="valid-feedback d-block" aria-live="polite">

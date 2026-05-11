@@ -3205,17 +3205,31 @@ body.modal-open {
 .admin-form-actions {
   position: sticky;
   bottom: 1rem;
-  z-index: 8;
+  z-index: 18;
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 0.85rem;
-  border: 1px solid rgba(217, 224, 236, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: var(--eh-radius);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--eh-shadow-sm);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(248, 251, 255, 0.58)),
+    radial-gradient(circle at top right, rgba(49, 94, 251, 0.12), transparent 14rem);
+  box-shadow:
+    0 1rem 2.5rem rgba(22, 32, 51, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.admin-form-actions::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.34);
+  pointer-events: none;
 }
 
 @media (max-width: 767.98px) {
@@ -3640,7 +3654,6 @@ body.modal-open {
   overflow-y: auto;
 }
 
-/* On tablet/narrow desktop, keep the horizontal admin tabs sticky too */
 @media (max-width: 1199.98px) {
   .admin-layout-shell {
     overflow: visible;
@@ -3669,9 +3682,54 @@ body.modal-open {
   }
 }
 
-/* On small mobile, avoid taking too much vertical space */
 @media (max-width: 575.98px) {
   .admin-sidebar {
     top: 4.75rem;
+  }
+}
+
+.admin-content-page .admin-form-actions {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: var(--eh-radius);
+  background:
+    radial-gradient(circle at top left, rgba(103, 212, 255, 0.24), transparent 15rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.64), rgba(232, 238, 252, 0.48));
+  box-shadow:
+    0 1.1rem 2.5rem rgba(22, 32, 51, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(26px) saturate(165%);
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+}
+
+.admin-content-page .admin-form-actions::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.admin-content-page .admin-form-actions .btn {
+  box-shadow: 0 0.55rem 1.1rem rgba(49, 94, 251, 0.12);
+}
+
+@media (max-width: 767.98px) {
+  .admin-content-page .admin-form-actions {
+    position: static;
+    display: grid;
+    padding: 0.85rem;
+  }
+
+  .admin-content-page .admin-form-actions .btn {
+    width: 100%;
   }
 }

@@ -55,7 +55,6 @@ export default {
   <main class="container py-5">
     <header class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-4">
       <div>
-        <p class="text-primary fw-semibold mb-2">Student organiser</p>
         <h1 class="display-6 fw-bold mb-2">Create hosted event</h1>
         <p class="text-muted mb-0">
           Reserve a venue and publish an event for other students to join.
