@@ -129,11 +129,12 @@ export default {
   <div class="container section-pad app-shell">
     <header class="events-header mb-4">
       <div>
-        <p class="text-primary fw-semibold mb-2">Browse events</p>
-        <h1 class="display-6 fw-bold mb-2">Find an event that fits your goals</h1>
-        <p class="text-muted mb-0">Search by title, category, location, or description. Use filters to narrow the list without leaving the page.</p>
+        <p class="text-primary fw-semibold mb-2">Event catalogue</p>
+        <h1 class="display-6 fw-bold mb-2">Campus events available for booking</h1>
+        <p class="text-muted mb-0">
+          Search the current event list by title, category, location, or description.
+        </p>
       </div>
-
       <div class="events-header-summary" aria-live="polite">
         <span>{{ resultLabel }}</span>
       </div>
@@ -142,12 +143,11 @@ export default {
     <section class="filter-panel glass-panel mb-5" :class="{ 'is-collapsed': !filtersExpanded }" aria-labelledby="event-filter-title" aria-describedby="event-filter-description">
       <div class="filter-panel-header">
         <div class="filter-panel-heading">
-          <h2 id="event-filter-title" class="h5 fw-bold mb-1">Refine event results</h2>
+          <h2 id="event-filter-title" class="h5 fw-bold mb-1">Filter event list</h2>
           <p id="event-filter-description" class="text-muted small mb-0" aria-live="polite">
             {{ filterPanelDescription }}
           </p>
         </div>
-
         <div class="filter-panel-actions">
           <button v-if="hasActiveFilters" type="button" class="btn btn-outline-primary btn-sm btn-pill" @click="clearFilters">
             Clear filters
@@ -165,7 +165,7 @@ export default {
           <div class="row g-3 align-items-end">
             <div class="col-lg-6">
               <label class="form-label" for="event-search">Search events</label>
-              <input id="event-search" v-model.trim="filters.search" type="search" class="form-control" placeholder="Search campus experiences..." autocomplete="off"/>
+              <input id="event-search" v-model.trim="filters.search" type="search" class="form-control" placeholder="Search event records..." autocomplete="off"/>
             </div>
 
             <div class="col-md-6 col-lg-4">

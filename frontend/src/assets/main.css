@@ -3628,7 +3628,6 @@ body.modal-open {
   }
 }
 
-/* Keep admin sidebar accessible while scrolling */
 .admin-layout-shell {
   overflow: visible;
 }
@@ -3732,4 +3731,32 @@ body.modal-open {
   .admin-content-page .admin-form-actions .btn {
     width: 100%;
   }
+}
+
+.home-access-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+}
+
+.home-access-list div {
+  padding: 0.85rem;
+  border: 1px solid var(--eh-border-soft);
+  border-radius: var(--eh-radius-sm);
+  background: var(--eh-bg-elevated);
+}
+
+.home-access-list dt {
+  margin-bottom: 0.25rem;
+  color: var(--eh-ink);
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.home-access-list dd {
+  margin: 0;
+  color: var(--eh-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
