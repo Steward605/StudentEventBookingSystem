@@ -37,15 +37,3 @@ Thumbs.db
 # Editor / IDE files
 .vscode/
 .idea/
-
-# Capacitor native platforms generated locally
-android/
-ios/
-
-# Android output packages
-*.apk
-*.aab
-
-# Android signing keys
-*.jks
-*.keystore
