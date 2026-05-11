@@ -3462,3 +3462,154 @@ body.modal-open {
     padding: 0.85rem 0.9rem;
   }
 }
+
+.users-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.admin-create-user-form {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--eh-border-soft);
+  border-radius: var(--eh-radius);
+  background:
+    radial-gradient(circle at top right, rgba(49, 94, 251, 0.08), transparent 18rem),
+    rgba(255, 255, 255, 0.92);
+  box-shadow: var(--eh-shadow-sm);
+}
+
+.admin-users-table {
+  width: 100%;
+  min-width: 960px;
+  table-layout: fixed;
+}
+
+.admin-users-table thead th {
+  padding: 0.95rem 0.85rem;
+  vertical-align: middle;
+  color: var(--eh-ink);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.15;
+  text-align: left;
+  background: var(--eh-bg-elevated);
+  border-bottom: 1px solid var(--eh-border);
+  white-space: nowrap;
+}
+
+.admin-users-table tbody td {
+  padding: 0.95rem 0.85rem;
+  vertical-align: middle;
+  color: var(--eh-ink);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.admin-users-table tbody tr:hover {
+  background: rgba(248, 250, 255, 0.82);
+}
+
+.users-col-user {
+  width: 24%;
+}
+
+.users-col-role {
+  width: 9%;
+}
+
+.users-col-status {
+  width: 11%;
+}
+
+.users-col-campus {
+  width: 10%;
+}
+
+.users-col-number {
+  width: 8%;
+  text-align: center;
+}
+
+.users-col-date {
+  width: 13%;
+}
+
+.users-col-actions {
+  width: 19%;
+  text-align: right;
+}
+
+.admin-user-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--eh-ink);
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-email {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--eh-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.admin-status-select {
+  width: 7.5rem;
+  min-height: 2.25rem;
+  border-radius: 999px;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.admin-delete-user-btn {
+  min-height: 2.25rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.admin-role-note {
+  color: var(--eh-muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+@media (max-width: 1199.98px) {
+  .admin-users-table {
+    min-width: 980px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .users-panel-header {
+    align-items: stretch;
+  }
+
+  .users-panel-header .btn {
+    width: 100%;
+  }
+
+  .admin-user-actions {
+    justify-content: flex-start;
+  }
+}
