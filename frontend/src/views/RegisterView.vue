@@ -1,5 +1,5 @@
 <script>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -9,13 +9,29 @@ export default {
     const auth = useAuthStore();
     const loading = ref(false);
     const error = ref('');
-    const form = reactive({ name: '', email: '', password: '', campus: 'Sarawak', interests: '' });
+    const form = reactive({ name: '', email: '', password: '', confirmPassword: '', campus: 'Sarawak', interests: '' });
+    const showPasswordMatch = computed(() => {
+      return form.confirmPassword.length > 0 && form.password === form.confirmPassword;
+    });
+    const showPasswordMismatch = computed(() => {
+      return form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
+    });
 
     async function submit() {
-      loading.value = true;
       error.value = '';
+      if (form.password !== form.confirmPassword) {
+        error.value = 'Passwords do not match.';
+        return;
+      }
+      loading.value = true;
       try {
-        await auth.register(form);
+        await auth.register({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          campus: form.campus,
+          interests: form.interests
+        });
         router.push('/dashboard');
       } catch (err) {
         error.value = err.message;
@@ -23,8 +39,7 @@ export default {
         loading.value = false;
       }
     }
-
-    return {loading, error, form, submit};
+    return { loading, error, form, submit, showPasswordMatch, showPasswordMismatch};
   }
 };
 </script>
@@ -58,6 +73,16 @@ export default {
               <div class="col-md-6">
                 <label for="password" class="form-label">Password</label>
                 <input id="password" v-model="form.password" type="password" class="form-control" minlength="8" required autocomplete="new-password" />
+              </div>
+              <div class="col-md-6">
+                <label for="confirmPassword" class="form-label">Confirm password</label>
+                <input id="confirmPassword" v-model="form.confirmPassword" type="password" class="form-control" :class="{ 'is-valid': showPasswordMatch, 'is-invalid': showPasswordMismatch }" minlength="8" required autocomplete="new-password" aria-describedby="confirmPasswordFeedback" :aria-invalid="showPasswordMismatch ? 'true' : 'false'"/>
+                <div v-if="showPasswordMatch" id="confirmPasswordFeedback" class="valid-feedback d-block" aria-live="polite">
+                  Passwords match.
+                </div>
+                <div v-else-if="showPasswordMismatch" id="confirmPasswordFeedback" class="invalid-feedback d-block" aria-live="polite">
+                  Passwords do not match.
+                </div>
               </div>
               <div class="col-12">
                 <label for="interests" class="form-label">Interests</label>

@@ -125,7 +125,6 @@ Other students can:
 If an older database file already exists, the seed data will not be inserted again. To regenerate the default seed data during development, stop the backend server and delete the local SQLite database files inside `backend/data/`, then restart the backend.
 
 ### Useful npm scripts
-
 Run these commands from the project root unless stated otherwise:
 
 | Command | Purpose |

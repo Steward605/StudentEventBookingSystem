@@ -18,7 +18,16 @@ const PORT = process.env.PORT || 5000;
 
 initialiseDatabase();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173,http://localhost,capacitor://localhost').split(',').map(origin => origin.trim()).filter(Boolean);
+initialiseDatabase();
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked request from origin: ${origin}`));
+  }
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
 app.get('/api/health', (req, res) => {
@@ -32,8 +41,10 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/external', externalRoutes);
 app.use('/api/venues', venueRoutes);
 app.use('/api/my-events', myEventRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
+
 app.listen(PORT, () => {
   console.log(`Student Event Booking System API running on http://localhost:${PORT}`);
 });
