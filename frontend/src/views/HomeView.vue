@@ -10,13 +10,12 @@ export default {
   setup() {
     const eventStore = useEventStore();
     const featuredEvents = computed(() => eventStore.featuredEvents);
-    const totalEvents = computed(() => eventStore.events.length);
-    const totalCategories = computed(() => eventStore.categories.length);
-    const freeEvents = computed(() => eventStore.events.filter(event => Number(event.price) === 0).length);
+    const totalEvents = computed(() => eventStore.summary.totalEvents || 0);
+    const totalCategories = computed(() => eventStore.summary.totalCategories || 0);
+    const freeEvents = computed(() => eventStore.summary.freeEvents || 0);
     onMounted(() => {
       if (eventStore.events.length === 0) eventStore.fetchEvents();
     });
-
     return {eventStore, featuredEvents, totalEvents, totalCategories, freeEvents};
   }
 };

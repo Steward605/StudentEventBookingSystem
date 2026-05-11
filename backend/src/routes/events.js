@@ -103,10 +103,12 @@ router.get('/', optionalAuth, (req, res) => {
     SELECT
       COUNT(*) AS totalEvents,
       COALESCE(SUM(CASE WHEN seats_left > 0 THEN 1 ELSE 0 END), 0) AS availableEvents,
-      COALESCE(SUM(CASE WHEN seats_left <= 0 THEN 1 ELSE 0 END), 0) AS soldOutEvents
+      COALESCE(SUM(CASE WHEN seats_left <= 0 THEN 1 ELSE 0 END), 0) AS soldOutEvents,
+      COALESCE(SUM(CASE WHEN price = 0 THEN 1 ELSE 0 END), 0) AS freeEvents
     FROM (
       SELECT
         e.id,
+        e.price,
         e.capacity - COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.ticket_count ELSE 0 END), 0) AS seats_left
       FROM events e
       LEFT JOIN bookings b ON b.event_id = e.id
@@ -122,6 +124,7 @@ router.get('/', optionalAuth, (req, res) => {
       totalEvents: summary.totalEvents,
       availableEvents: summary.availableEvents,
       soldOutEvents: summary.soldOutEvents,
+      freeEvents: summary.freeEvents,
       totalCategories: categories.length
     },
     pagination: {

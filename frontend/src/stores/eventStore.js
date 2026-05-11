@@ -21,6 +21,7 @@ export const useEventStore = defineStore('events', () => {
     totalEvents: 0,
     availableEvents: 0,
     soldOutEvents: 0,
+    freeEvents: 0,
     totalCategories: 0
   });
 
@@ -62,6 +63,7 @@ export const useEventStore = defineStore('events', () => {
         totalEvents: pagination.value.totalItems,
         availableEvents: events.value.filter(event => Number(event.seats_left ?? 0) > 0).length,
         soldOutEvents: events.value.filter(event => Number(event.seats_left ?? 0) <= 0).length,
+        freeEvents: events.value.filter(event => Number(event.price ?? 0) === 0).length,
         totalCategories: categories.value.length
       };
       lastParams.value = {
