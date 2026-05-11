@@ -3613,3 +3613,65 @@ body.modal-open {
     justify-content: flex-start;
   }
 }
+
+/* Keep admin sidebar accessible while scrolling */
+.admin-layout-shell {
+  overflow: visible;
+}
+
+.admin-layout-main {
+  overflow-x: clip;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 5.75rem;
+  z-index: 30;
+  align-self: start;
+}
+
+.admin-sidebar-card {
+  max-height: calc(100vh - 7rem);
+  overflow: hidden;
+}
+
+.admin-sidebar-nav {
+  max-height: calc(100vh - 11rem);
+  overflow-y: auto;
+}
+
+/* On tablet/narrow desktop, keep the horizontal admin tabs sticky too */
+@media (max-width: 1199.98px) {
+  .admin-layout-shell {
+    overflow: visible;
+  }
+
+  .admin-layout-main {
+    overflow-x: clip;
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    top: 5.25rem;
+    z-index: 30;
+    width: 100%;
+  }
+
+  .admin-sidebar-card {
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .admin-sidebar-nav {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
+
+/* On small mobile, avoid taking too much vertical space */
+@media (max-width: 575.98px) {
+  .admin-sidebar {
+    top: 4.75rem;
+  }
+}
