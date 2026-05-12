@@ -35,8 +35,10 @@ export default {
 
       return sortedBookings.value.filter(booking => booking.status === activeStatus.value);
     });
+
     const confirmedCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'confirmed').length);
     const cancelledCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'cancelled').length);
+
     function reservedSeatCount(booking) {
       return Number(booking.seat_count ?? booking.ticket_count ?? 0);
     }
@@ -56,21 +58,10 @@ export default {
       { label: 'Seats held', value: totalSeats.value, helper: 'Confirmed seats' }
     ]);
 
-    function reservedSeatCount(booking) {
-      return Number(booking.seat_count ?? booking.ticket_count ?? 0);
-    }
-
-    function seatLabel(count) {
-      return Number(count) === 1 ? 'seat' : 'seats';
-    }
-
     function bookingTotal(booking) {
       return Number(booking.price || 0) * reservedSeatCount(booking);
     }
 
-    function bookingTotal(booking) {
-      return Number(booking.price || 0) * Number(booking.ticket_count || 0);
-    }
     function eventRoute(booking) {
       return booking.event_id ? `/events/${booking.event_id}` : '/events';
     }
@@ -141,33 +132,18 @@ export default {
           <h2 id="history-filter-title" class="h4 fw-bold mb-0">Filter booking records</h2>
         </div>
 
-        <div class="btn-group flex-wrap" role="group" aria-label="Filter booking history">
-          <button
-            v-for="filter in statusFilters"
-            :key="filter.value"
-            type="button"
-            :class="['btn btn-sm btn-pill', activeStatus === filter.value ? 'btn-primary' : 'btn-outline-primary']"
-            @click="activeStatus = filter.value"
-          >
+        <div class="history-filter-control" role="group" aria-label="Filter booking history">
+          <button v-for="filter in statusFilters" :key="filter.value" type="button" :class="['history-filter-button', { 'is-active': activeStatus === filter.value }]" :aria-pressed="activeStatus === filter.value" @click="activeStatus = filter.value">
             {{ filter.label }}
           </button>
         </div>
       </section>
 
-      <EmptyState
-        v-if="filteredBookings.length === 0"
-        title="No bookings found"
-        message="Bookings matching this filter will appear here."
-      />
+      <EmptyState v-if="filteredBookings.length === 0" title="No bookings found" message="Bookings matching this filter will appear here."/>
 
       <section v-else class="history-list" aria-label="Booking history records">
         <article v-for="booking in filteredBookings" :key="booking.id" class="history-card">
-          <img
-            class="history-thumbnail"
-            :src="booking.image_url"
-            :alt="booking.title"
-            loading="lazy"
-          />
+          <img class="history-thumbnail" :src="booking.image_url" :alt="booking.title" loading="lazy"/>
 
           <div class="history-card-main">
             <div class="history-card-title-row">
@@ -218,13 +194,7 @@ export default {
                 View event
               </RouterLink>
 
-              <button
-                v-if="booking.status === 'confirmed'"
-                class="btn btn-sm btn-outline-danger btn-pill"
-                type="button"
-                :disabled="cancellingId === booking.id"
-                @click="cancelBooking(booking)"
-              >
+              <button v-if="booking.status === 'confirmed'" class="btn btn-sm btn-outline-danger btn-pill" type="button" :disabled="cancellingId === booking.id" @click="cancelBooking(booking)">
                 {{ cancellingId === booking.id ? 'Cancelling...' : 'Cancel' }}
               </button>
             </div>

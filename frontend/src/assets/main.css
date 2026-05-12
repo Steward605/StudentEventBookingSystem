@@ -659,6 +659,55 @@ textarea {
   padding-inline: 1rem;
 }
 
+.history-filter-control {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.25rem;
+  border: 1px solid var(--eh-primary);
+  border-radius: 1.4rem;
+  background: #ffffff;
+}
+
+.history-filter-button {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.6rem;
+  border: 0;
+  border-radius: 1.05rem;
+  background: transparent;
+  color: var(--eh-primary);
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.history-filter-button.is-active {
+  background: var(--eh-primary);
+  color: #ffffff;
+  box-shadow: 0 0.55rem 1.1rem rgba(49, 94, 251, 0.2);
+}
+
+.history-filter-button:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem var(--eh-primary-ring);
+}
+
+@media (max-width: 575.98px) {
+  .history-filter-control {
+    grid-template-columns: 1fr;
+    border-radius: 1.25rem;
+  }
+
+  .history-filter-button {
+    width: 100%;
+  }
+}
+
 .btn-primary {
   --bs-btn-bg: var(--eh-primary);
   --bs-btn-border-color: var(--eh-primary);
@@ -2278,9 +2327,14 @@ textarea {
 
 .admin-management-header {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 1.5rem;
+}
+
+.admin-management-header .admin-page-actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 @media (max-width: 767.98px) {
@@ -2541,11 +2595,6 @@ textarea {
 }
 
 @media (max-width: 991.98px) {
-  .admin-management-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
   .admin-filter-header,
   .admin-results-heading {
     align-items: stretch;
@@ -2848,10 +2897,21 @@ body.modal-open {
 
 .admin-page-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.admin-page-header > div {
+  min-width: 0;
+  max-width: 42rem;
+}
+
+.admin-page-header .display-6 {
+  max-width: 100%;
+  line-height: 1.08;
 }
 
 .admin-page-actions {

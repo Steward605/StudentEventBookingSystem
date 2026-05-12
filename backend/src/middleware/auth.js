@@ -18,6 +18,7 @@ const publicUserColumns = `
 `;
 
 export function createToken(user) {
+  const expiresIn = user.role === 'admin' ? '15m' : '8h';
   return jwt.sign(
     {
       id: user.id,
@@ -26,7 +27,7 @@ export function createToken(user) {
       verification_status: user.verification_status
     },
     JWT_SECRET,
-    { expiresIn: '8h' }
+    { expiresIn }
   );
 }
 
