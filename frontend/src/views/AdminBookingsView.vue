@@ -11,9 +11,12 @@ export default {
     const bookings = ref([]);
     const loading = ref(true);
     const cancellingId = ref(null);
+    const removingId = ref(null);
     const pendingCancel = ref(null);
+    const pendingRemove = ref(null);
     const error = ref('');
     const cancelError = ref('');
+    const removeError = ref('');
     const copyStatus = ref('');
     const filters = reactive({search: '', status: 'all'});
 
@@ -92,11 +95,9 @@ export default {
 
     async function confirmCancelBooking() {
       if (!pendingCancel.value) return;
-
       cancellingId.value = pendingCancel.value.id;
       cancelError.value = '';
       error.value = '';
-
       try {
         await api.delete(`/bookings/${pendingCancel.value.id}`);
         bookings.value = bookings.value.map(item => item.id === pendingCancel.value.id ? { ...item, status: 'cancelled' } : item);
@@ -108,13 +109,39 @@ export default {
       }
     }
 
+    function requestRemove(booking) {
+      pendingRemove.value = booking;
+      removeError.value = '';
+    }
+
+    function closeRemoveDialog() {
+      if (removingId.value) return;
+      pendingRemove.value = null;
+      removeError.value = '';
+    }
+
+    async function confirmRemoveBookingRecord() {
+      if (!pendingRemove.value) return;
+      removingId.value = pendingRemove.value.id;
+      removeError.value = '';
+      error.value = '';
+      try {
+        await api.delete(`/bookings/${pendingRemove.value.id}/record`);
+        bookings.value = bookings.value.filter(item => item.id !== pendingRemove.value.id);
+        pendingRemove.value = null;
+      } catch (err) {
+        removeError.value = err.message;
+      } finally {
+        removingId.value = null;
+      }
+    }
+
     async function copyReference(reference) {
       if (!reference) return;
-
       try {
         await navigator.clipboard.writeText(reference);
         copyStatus.value = reference;
-      } catch (err) {
+      } catch {
         const textarea = document.createElement('textarea');
         textarea.value = reference;
         textarea.setAttribute('readonly', '');
@@ -126,7 +153,7 @@ export default {
         try {
           document.execCommand('copy');
           copyStatus.value = reference;
-        } catch (fallbackErr) {
+        } catch {
           copyStatus.value = '';
         } finally {
           document.body.removeChild(textarea);
@@ -140,7 +167,7 @@ export default {
 
     onMounted(loadBookings);
 
-    return {bookings, filteredBookings, summaryCards, loading, cancellingId, pendingCancel, error, cancelError, copyStatus, filters, hasActiveFilters, loadBookings, bookingTitle, bookingTotal, statusClass, statusLabel, clearFilters, requestCancel, closeCancelDialog, confirmCancelBooking, copyReference, formatCurrency, formatDate};
+    return { bookings, filteredBookings, summaryCards, loading, cancellingId, removingId, pendingCancel, pendingRemove, error, cancelError, removeError, copyStatus, filters, hasActiveFilters, loadBookings, bookingTitle, bookingTotal, statusClass, statusLabel, clearFilters, requestCancel, requestRemove, closeCancelDialog, closeRemoveDialog, confirmCancelBooking, confirmRemoveBookingRecord, copyReference, formatCurrency, formatDate };
   }
 };
 </script>
@@ -253,6 +280,9 @@ export default {
             <button v-if="booking.status === 'confirmed'" class="btn btn-outline-danger btn-sm btn-pill" type="button" :disabled="cancellingId === booking.id" @click="requestCancel(booking)">
               {{ cancellingId === booking.id ? 'Cancelling...' : 'Cancel booking' }}
             </button>
+            <button v-else-if="booking.status === 'cancelled'" class="btn btn-danger btn-sm btn-pill" type="button" :disabled="removingId === booking.id" @click="requestRemove(booking)">
+              {{ removingId === booking.id ? 'Removing...' : 'Remove record' }}
+            </button>
             <span v-else class="admin-no-action">No action available</span>
           </div>
         </article>
@@ -271,6 +301,26 @@ export default {
           <button class="btn btn-outline-primary btn-pill" type="button" :disabled="Boolean(cancellingId)" @click="closeCancelDialog">Keep booking</button>
           <button class="btn btn-danger btn-pill" type="button" :disabled="Boolean(cancellingId)" @click="confirmCancelBooking">
             {{ cancellingId ? 'Cancelling...' : 'Yes, cancel it' }}
+          </button>
+        </div>
+      </section>
+    </div>
+    <div v-if="pendingRemove" class="admin-confirm-backdrop" role="presentation" @click.self="closeRemoveDialog">
+      <section class="admin-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-booking-title" aria-describedby="remove-booking-description">
+        <p class="text-danger fw-semibold mb-2">Remove cancelled record</p>
+        <h2 id="remove-booking-title" class="h4 fw-bold mb-2">Remove this cancelled booking?</h2>
+        <p id="remove-booking-description" class="text-muted mb-3">
+          This will permanently remove reference
+          <strong>{{ pendingRemove.booking_reference }}</strong>
+          for {{ bookingTitle(pendingRemove) }} from the admin booking records.
+        </p>
+        <div v-if="removeError" class="alert alert-danger" role="alert">{{ removeError }}</div>
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
+          <button class="btn btn-outline-primary btn-pill" type="button" :disabled="Boolean(removingId)" @click="closeRemoveDialog">
+            Keep record
+          </button>
+          <button class="btn btn-danger btn-pill" type="button" :disabled="Boolean(removingId)" @click="confirmRemoveBookingRecord">
+            {{ removingId ? 'Removing...' : 'Yes, remove record' }}
           </button>
         </div>
       </section>

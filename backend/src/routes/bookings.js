@@ -55,6 +55,19 @@ router.get('/all', requireAuth, requireAdmin, (req, res) => {
   res.json({ bookings });
 });
 
+router.delete('/:id/record', requireAuth, requireAdmin, (req, res) => {
+  const booking = db.prepare('SELECT id, status FROM bookings WHERE id = ?').get(req.params.id);
+  if (!booking) {
+    return res.status(404).json({ message: 'Booking record not found.' });
+  }
+  if (booking.status !== 'cancelled') {
+    return res.status(409).json({ message: 'Only cancelled booking records can be removed.' });
+  }
+  db.prepare('DELETE FROM bookings WHERE id = ?').run(req.params.id);
+  res.status(204).send();
+});
+
+
 router.post('/', requireAuth, (req, res, next) => {
   if (req.user.role === 'admin') {
     return res.status(403).json({ message: 'Admin accounts cannot reserve seats for events.' });

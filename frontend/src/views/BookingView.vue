@@ -59,7 +59,7 @@ export default {
       try {
         await navigator.clipboard.writeText(bookingReference.value);
         copyStatus.value = 'Reference copied';
-      } catch (err) {
+      } catch {
         const textarea = document.createElement('textarea');
         textarea.value = bookingReference.value;
         textarea.setAttribute('readonly', '');
@@ -71,7 +71,7 @@ export default {
         try {
           document.execCommand('copy');
           copyStatus.value = 'Reference copied';
-        } catch (fallbackErr) {
+        } catch {
           copyStatus.value = 'Copy failed. Select and copy the reference manually.';
         } finally {
           document.body.removeChild(textarea);
