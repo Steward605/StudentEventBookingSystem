@@ -173,11 +173,7 @@ export default {
         <form v-else class="booking-form-card" novalidate @submit.prevent="submitBooking">
           <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
 
-          <div class="booking-progress mb-4" aria-label="Booking steps">
-            <span class="active">Details</span>
-            <span>Review</span>
-            <span>Confirm</span>
-          </div>
+          <h2 class="h5 fw-bold mb-3">Booking details</h2>
 
           <div class="mb-3">
             <label for="attendeeName" class="form-label">Attendee name</label>
