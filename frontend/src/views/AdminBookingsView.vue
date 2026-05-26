@@ -1,14 +1,28 @@
 <script>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import Paginate from 'vuejs-paginate-next';
 import EmptyState from '@/components/EmptyState.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { api } from '@/services/api';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 export default {
-  components: {EmptyState, LoadingState},
+  components: {EmptyState, LoadingState, paginate: Paginate},
   setup() {
     const bookings = ref([]);
+    const summary = ref({
+      totalRecords: 0,
+      confirmedRecords: 0,
+      cancelledRecords: 0,
+      reservedSeats: 0
+    });
+    const pagination = ref({
+      page: 1,
+      limit: 8,
+      totalItems: 0,
+      totalPages: 1
+    });
+    const currentPage = ref(1);
     const loading = ref(true);
     const cancellingId = ref(null);
     const removingId = ref(null);
@@ -19,39 +33,70 @@ export default {
     const removeError = ref('');
     const copyStatus = ref('');
     const filters = reactive({search: '', status: 'all'});
+    const perPage = 8;
+    let debounceTimer;
 
-    const filteredBookings = computed(() => {
-      const keyword = filters.search.trim().toLowerCase();
-
-      return bookings.value.filter(booking => {
-        const matchesSearch = !keyword || [booking.title, booking.event_title, booking.student_name, booking.student_email, booking.booking_reference, booking.status].filter(Boolean).some(value => String(value).toLowerCase().includes(keyword));
-        const matchesStatus = filters.status === 'all' || booking.status === filters.status;
-        return matchesSearch && matchesStatus;
-      });
-    });
-
+    const filteredBookings = computed(() => bookings.value);
     const summaryCards = computed(() => {
-      const confirmed = bookings.value.filter(booking => booking.status === 'confirmed').length;
-      const cancelled = bookings.value.filter(booking => booking.status === 'cancelled').length;
-      const reservedSeats = bookings.value.filter(booking => booking.status === 'confirmed').reduce((sum, booking) => sum + Number(booking.seat_count ?? booking.ticket_count ?? 0), 0);
-
       return [
-        {label: 'Total records', value: bookings.value.length},
-        {label: 'Confirmed', value: confirmed},
-        {label: 'Cancelled', value: cancelled},
-        {label: 'Reserved seats', value: reservedSeats}
+        {label: 'Total records', value: summary.value.totalRecords},
+        {label: 'Confirmed', value: summary.value.confirmedRecords},
+        {label: 'Cancelled', value: summary.value.cancelledRecords},
+        {label: 'Reserved seats', value: summary.value.reservedSeats}
       ];
     });
 
     const hasActiveFilters = computed(() => Boolean(filters.search || filters.status !== 'all'));
+    const resultLabel = computed(() => {
+      const count = pagination.value.totalItems ?? filteredBookings.value.length;
+      return `${count} ${count === 1 ? 'booking' : 'bookings'} shown`;
+    });
+    const paginationLabel = computed(() => {
+      const { page, limit, totalItems } = pagination.value;
 
-    async function loadBookings() {
+      if (!totalItems) {
+        return 'No booking records found';
+      }
+
+      const start = (page - 1) * limit + 1;
+      const end = Math.min(page * limit, totalItems);
+      return `Showing ${start}-${end} of ${totalItems} booking records`;
+    });
+
+    function buildParams(page = 1) {
+      return {
+        ...(filters.search ? { search: filters.search } : {}),
+        ...(filters.status !== 'all' ? { status: filters.status } : {}),
+        page,
+        limit: perPage
+      };
+    }
+
+    function buildQuery(params) {
+      const query = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.set(key, value);
+        }
+      });
+      return query.toString() ? `?${query.toString()}` : '';
+    }
+
+    async function loadBookings(page = currentPage.value) {
+      currentPage.value = page;
       loading.value = true;
       error.value = '';
 
       try {
-        const data = await api.get('/bookings/all');
-        bookings.value = data.bookings;
+        const data = await api.get(`/bookings/all${buildQuery(buildParams(page))}`);
+        bookings.value = data.bookings || [];
+        summary.value = data.summary || summary.value;
+        pagination.value = data.pagination || {
+          page,
+          limit: perPage,
+          totalItems: bookings.value.length,
+          totalPages: 1
+        };
       } catch (err) {
         error.value = err.message;
       } finally {
@@ -82,6 +127,15 @@ export default {
       filters.status = 'all';
     }
 
+    function goToPage(pageNum) {
+      const totalPages = pagination.value.totalPages || 1;
+      if (pageNum < 1 || pageNum > totalPages || pageNum === pagination.value.page) {
+        return;
+      }
+      loadBookings(pageNum);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function requestCancel(booking) {
       pendingCancel.value = booking;
       cancelError.value = '';
@@ -100,8 +154,11 @@ export default {
       error.value = '';
       try {
         await api.delete(`/bookings/${pendingCancel.value.id}`);
-        bookings.value = bookings.value.map(item => item.id === pendingCancel.value.id ? { ...item, status: 'cancelled' } : item);
         pendingCancel.value = null;
+        await loadBookings(currentPage.value);
+        if (bookings.value.length === 0 && currentPage.value > 1 && pagination.value.totalItems > 0) {
+          await loadBookings(currentPage.value - 1);
+        }
       } catch (err) {
         cancelError.value = err.message;
       } finally {
@@ -127,8 +184,11 @@ export default {
       error.value = '';
       try {
         await api.delete(`/bookings/${pendingRemove.value.id}/record`);
-        bookings.value = bookings.value.filter(item => item.id !== pendingRemove.value.id);
         pendingRemove.value = null;
+        await loadBookings(currentPage.value);
+        if (bookings.value.length === 0 && currentPage.value > 1 && pagination.value.totalItems > 0) {
+          await loadBookings(currentPage.value - 1);
+        }
       } catch (err) {
         removeError.value = err.message;
       } finally {
@@ -165,9 +225,19 @@ export default {
       }, 2200);
     }
 
-    onMounted(loadBookings);
+    watch(filters, () => {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(() => {
+        loadBookings(1);
+      }, 250);
+    });
 
-    return { bookings, filteredBookings, summaryCards, loading, cancellingId, removingId, pendingCancel, pendingRemove, error, cancelError, removeError, copyStatus, filters, hasActiveFilters, loadBookings, bookingTitle, bookingTotal, statusClass, statusLabel, clearFilters, requestCancel, requestRemove, closeCancelDialog, closeRemoveDialog, confirmCancelBooking, confirmRemoveBookingRecord, copyReference, formatCurrency, formatDate };
+    onMounted(loadBookings);
+    onBeforeUnmount(() => {
+      window.clearTimeout(debounceTimer);
+    });
+
+    return { bookings, filteredBookings, summaryCards, pagination, currentPage, resultLabel, paginationLabel, loading, cancellingId, removingId, pendingCancel, pendingRemove, error, cancelError, removeError, copyStatus, filters, hasActiveFilters, loadBookings, goToPage, bookingTitle, bookingTotal, statusClass, statusLabel, clearFilters, requestCancel, requestRemove, closeCancelDialog, closeRemoveDialog, confirmCancelBooking, confirmRemoveBookingRecord, copyReference, formatCurrency, formatDate };
   }
 };
 </script>
@@ -182,7 +252,7 @@ export default {
       </div>
 
       <div class="admin-page-actions">
-        <button class="btn btn-outline-primary btn-pill" type="button" :disabled="loading" @click="loadBookings">
+        <button class="btn btn-outline-primary btn-pill" type="button" :disabled="loading" @click="loadBookings(1)">
           {{ loading ? 'Refreshing...' : 'Refresh records' }}
         </button>
       </div>
@@ -226,14 +296,14 @@ export default {
         </div>
       </section>
 
-      <EmptyState v-if="bookings.length === 0" title="No bookings found" message="Student bookings will appear here after seats are reserved." />
+      <EmptyState v-if="summaryCards[0].value === 0" title="No bookings found" message="Student bookings will appear here after seats are reserved." />
 
       <EmptyState v-else-if="filteredBookings.length === 0" title="No matching bookings" message="Try a different keyword or status filter." />
 
       <section v-else class="admin-management-list" aria-labelledby="booking-admin-results-title">
         <div class="admin-results-heading">
           <h2 id="booking-admin-results-title" class="h4 fw-bold mb-0">Booking records</h2>
-          <p class="text-muted mb-0">{{ filteredBookings.length }} {{ filteredBookings.length === 1 ? 'booking' : 'bookings' }} shown</p>
+          <p class="text-muted mb-0">{{ resultLabel }}</p>
         </div>
 
         <article v-for="booking in filteredBookings" :key="booking.id" class="admin-record-card">
@@ -286,6 +356,12 @@ export default {
             <span v-else class="admin-no-action">No action available</span>
           </div>
         </article>
+
+        <div class="d-flex flex-column align-items-center gap-2 mt-4">
+          <p class="text-muted small mb-0" aria-live="polite">{{ paginationLabel }}</p>
+
+          <paginate v-model="currentPage" :page-count="pagination.totalPages" :page-range="3" :margin-pages="1" :click-handler="goToPage" :prev-text="'Previous'" :next-text="'Next'" :container-class="'pagination flex-wrap justify-content-center mb-0'" :page-class="'page-item'" :page-link-class="'page-link'" :prev-class="'page-item'" :prev-link-class="'page-link'" :next-class="'page-item'" :next-link-class="'page-link'" :break-view-class="'page-item disabled'" :break-view-link-class="'page-link'"/>
+        </div>
       </section>
     </div>
 

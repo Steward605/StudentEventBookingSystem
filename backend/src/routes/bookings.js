@@ -5,6 +5,35 @@ import { requiredEmail, requiredPositiveInteger, requiredString } from '../utils
 
 const router = express.Router();
 router.get('/', requireAuth, (req, res) => {
+  const allowedStatuses = ['confirmed', 'cancelled'];
+  const status = allowedStatuses.includes(req.query.status) ? req.query.status : 'all';
+  const shouldPaginate = req.query.page !== undefined || req.query.limit !== undefined;
+
+  function parsePositiveInteger(value, fallback) {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  const page = parsePositiveInteger(req.query.page, 1);
+  const limit = Math.min(parsePositiveInteger(req.query.limit, 6), 24);
+  const offset = (page - 1) * limit;
+  let whereSql = 'WHERE b.user_id = ?';
+  const params = [req.user.id];
+
+  if (status !== 'all') {
+    whereSql += ' AND b.status = ?';
+    params.push(status);
+  }
+
+  const totalItems = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM bookings b
+    ${whereSql}
+  `).get(...params).count;
+
+  const paginationSql = shouldPaginate ? 'LIMIT ? OFFSET ?' : '';
+  const bookingParams = shouldPaginate ? [...params, limit, offset] : params;
+
   const bookings = db.prepare(`
     SELECT
       b.*,
@@ -23,12 +52,81 @@ router.get('/', requireAuth, (req, res) => {
     FROM bookings b
     JOIN events e ON e.id = b.event_id
     LEFT JOIN venues v ON v.id = e.venue_id
-    WHERE b.user_id = ?
-    ORDER BY b.created_at DESC
-  `).all(req.user.id);
-  res.json({ bookings });
+    ${whereSql}
+    ORDER BY e.event_date DESC, e.start_time DESC, b.created_at DESC
+    ${paginationSql}
+  `).all(...bookingParams);
+
+  const summary = db.prepare(`
+    SELECT
+      COUNT(*) AS totalRecords,
+      COALESCE(SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END), 0) AS confirmedRecords,
+      COALESCE(SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END), 0) AS cancelledRecords,
+      COALESCE(SUM(CASE WHEN status = 'confirmed' THEN ticket_count ELSE 0 END), 0) AS confirmedSeats
+    FROM bookings
+    WHERE user_id = ?
+  `).get(req.user.id);
+
+  res.json({
+    bookings,
+    summary,
+    pagination: {
+      page,
+      limit: shouldPaginate ? limit : Math.max(bookings.length, 1),
+      totalItems,
+      totalPages: shouldPaginate ? Math.max(Math.ceil(totalItems / limit), 1) : 1
+    }
+  });
 });
 router.get('/all', requireAuth, requireAdmin, (req, res) => {
+  const allowedStatuses = ['confirmed', 'cancelled'];
+  const status = allowedStatuses.includes(req.query.status) ? req.query.status : 'all';
+  const search = req.query.search?.trim().toLowerCase() || '';
+  const shouldPaginate = req.query.page !== undefined || req.query.limit !== undefined;
+
+  function parsePositiveInteger(value, fallback) {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  const page = parsePositiveInteger(req.query.page, 1);
+  const limit = Math.min(parsePositiveInteger(req.query.limit, 8), 32);
+  const offset = (page - 1) * limit;
+  let whereSql = 'WHERE 1 = 1';
+  const params = [];
+
+  if (status !== 'all') {
+    whereSql += ' AND b.status = ?';
+    params.push(status);
+  }
+
+  if (search) {
+    whereSql += `
+      AND (
+        LOWER(b.booking_reference) LIKE ?
+        OR LOWER(b.status) LIKE ?
+        OR LOWER(u.name) LIKE ?
+        OR LOWER(u.email) LIKE ?
+        OR LOWER(e.title) LIKE ?
+        OR LOWER(e.category) LIKE ?
+        OR LOWER(e.location) LIKE ?
+        OR LOWER(e.city) LIKE ?
+      )
+    `;
+    const wildcardSearch = `%${search}%`;
+    params.push(wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch);
+  }
+
+  const totalItems = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM bookings b
+    JOIN users u ON u.id = b.user_id
+    JOIN events e ON e.id = b.event_id
+    ${whereSql}
+  `).get(...params).count;
+
+  const paginationSql = shouldPaginate ? 'LIMIT ? OFFSET ?' : '';
+  const bookingParams = shouldPaginate ? [...params, limit, offset] : params;
   const bookings = db.prepare(`
     SELECT
       b.*,
@@ -50,9 +148,30 @@ router.get('/all', requireAuth, requireAdmin, (req, res) => {
     JOIN users u ON u.id = b.user_id
     JOIN events e ON e.id = b.event_id
     LEFT JOIN venues v ON v.id = e.venue_id
+    ${whereSql}
     ORDER BY b.created_at DESC
-  `).all();
-  res.json({ bookings });
+    ${paginationSql}
+  `).all(...bookingParams);
+
+  const summary = db.prepare(`
+    SELECT
+      COUNT(*) AS totalRecords,
+      COALESCE(SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END), 0) AS confirmedRecords,
+      COALESCE(SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END), 0) AS cancelledRecords,
+      COALESCE(SUM(CASE WHEN status = 'confirmed' THEN ticket_count ELSE 0 END), 0) AS reservedSeats
+    FROM bookings
+  `).get();
+
+  res.json({
+    bookings,
+    summary,
+    pagination: {
+      page,
+      limit: shouldPaginate ? limit : Math.max(bookings.length, 1),
+      totalItems,
+      totalPages: shouldPaginate ? Math.max(Math.ceil(totalItems / limit), 1) : 1
+    }
+  });
 });
 
 router.delete('/:id/record', requireAuth, requireAdmin, (req, res) => {

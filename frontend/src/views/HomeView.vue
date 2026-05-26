@@ -10,13 +10,10 @@ export default {
   setup() {
     const eventStore = useEventStore();
     const featuredEvents = computed(() => eventStore.featuredEvents);
-    const totalEvents = computed(() => eventStore.summary.totalEvents || 0);
-    const totalCategories = computed(() => eventStore.summary.totalCategories || 0);
-    const freeEvents = computed(() => eventStore.summary.freeEvents || 0);
     onMounted(() => {
       if (eventStore.events.length === 0) eventStore.fetchEvents();
     });
-    return {eventStore, featuredEvents, totalEvents, totalCategories, freeEvents};
+    return {eventStore, featuredEvents};
   }
 };
 </script>
@@ -26,10 +23,6 @@ export default {
     <div class="container py-lg-5">
       <div class="row align-items-center g-5">
         <div class="col-lg-7">
-          <span class="badge text-bg-light text-primary rounded-pill mb-3">
-            University event booking system
-          </span>
-
           <h1 id="home-title" class="display-4 fw-bold lh-1 mb-3">
             Student Event Booking System
           </h1>
@@ -38,7 +31,7 @@ export default {
             Browse approved campus events, reserve available seats, and keep a record of your event bookings.
           </p>
 
-          <div class="d-flex flex-column flex-sm-row gap-3 mb-4">
+          <div class="d-flex flex-column flex-sm-row gap-3">
             <RouterLink class="btn btn-light btn-lg btn-pill btn-hover-elevate" to="/events">
               View events
             </RouterLink>
@@ -47,21 +40,6 @@ export default {
               Student login
             </RouterLink>
           </div>
-
-          <dl class="home-metrics" aria-label="Event system summary">
-            <div class="home-metric">
-              <dt>{{ totalEvents }}</dt>
-              <dd>Listed events</dd>
-            </div>
-            <div class="home-metric">
-              <dt>{{ totalCategories }}</dt>
-              <dd>Categories</dd>
-            </div>
-            <div class="home-metric">
-              <dt>{{ freeEvents }}</dt>
-              <dd>Free events</dd>
-            </div>
-          </dl>
         </div>
 
         <div class="col-lg-5">

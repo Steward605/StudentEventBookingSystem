@@ -1,5 +1,6 @@
 <script>
 import { computed, onMounted, ref } from 'vue';
+import Paginate from 'vuejs-paginate-next';
 import LoadingState from '@/components/LoadingState.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import { useBookingStore } from '@/stores/bookingStore';
@@ -8,36 +9,45 @@ import { formatCurrency, formatDate } from '@/utils/formatters';
 export default {
   components: {
     LoadingState,
-    EmptyState
+    EmptyState,
+    paginate: Paginate
   },
   setup() {
     const bookingStore = useBookingStore();
     const loading = ref(true);
     const error = ref('');
     const activeStatus = ref('all');
+    const currentPage = ref(1);
     const cancellingId = ref(null);
+    const perPage = 5;
     const statusFilters = [
       { value: 'all', label: 'All bookings' },
       { value: 'confirmed', label: 'Confirmed' },
       { value: 'cancelled', label: 'Cancelled' }
     ];
-    const sortedBookings = computed(() => {
-      return [...bookingStore.bookings].sort((a, b) => {
-        const dateA = new Date(`${a.event_date || ''} ${a.start_time || '00:00'}`);
-        const dateB = new Date(`${b.event_date || ''} ${b.start_time || '00:00'}`);
-        return dateB - dateA;
-      });
+
+    const filteredBookings = computed(() => bookingStore.bookings);
+    const confirmedCount = computed(() => Number(bookingStore.summary.confirmedRecords || 0));
+    const cancelledCount = computed(() => Number(bookingStore.summary.cancelledRecords || 0));
+    const totalRecords = computed(() => Number(bookingStore.summary.totalRecords || 0));
+    const totalSeats = computed(() => Number(bookingStore.summary.confirmedSeats || 0));
+    const statusResultLabel = computed(() => {
+      const count = bookingStore.pagination.totalItems ?? filteredBookings.value.length;
+      const activeFilter = statusFilters.find(filter => filter.value === activeStatus.value);
+      const label = activeFilter?.label.toLowerCase() || 'bookings';
+      return `${count} ${count === 1 ? 'record' : 'records'} shown for ${label}`;
     });
-    const filteredBookings = computed(() => {
-      if (activeStatus.value === 'all') {
-        return sortedBookings.value;
+    const paginationLabel = computed(() => {
+      const { page, limit, totalItems } = bookingStore.pagination;
+
+      if (!totalItems) {
+        return 'No booking records found';
       }
 
-      return sortedBookings.value.filter(booking => booking.status === activeStatus.value);
+      const start = (page - 1) * limit + 1;
+      const end = Math.min(page * limit, totalItems);
+      return `Showing ${start}-${end} of ${totalItems} booking records`;
     });
-
-    const confirmedCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'confirmed').length);
-    const cancelledCount = computed(() => bookingStore.bookings.filter(booking => booking.status === 'cancelled').length);
 
     function reservedSeatCount(booking) {
       return Number(booking.seat_count ?? booking.ticket_count ?? 0);
@@ -46,13 +56,8 @@ export default {
     function seatLabel(count) {
       return Number(count) === 1 ? 'seat' : 'seats';
     }
-    const totalSeats = computed(() => {
-      return bookingStore.bookings
-        .filter(booking => booking.status === 'confirmed')
-        .reduce((sum, booking) => sum + reservedSeatCount(booking), 0);
-    });
     const summaryCards = computed(() => [
-      { label: 'Total records', value: bookingStore.bookings.length, helper: 'All booking attempts' },
+      { label: 'Total records', value: totalRecords.value, helper: 'All booking attempts' },
       { label: 'Confirmed', value: confirmedCount.value, helper: 'Active reservations' },
       { label: 'Cancelled', value: cancelledCount.value, helper: 'Removed reservations' },
       { label: 'Seats held', value: totalSeats.value, helper: 'Confirmed seats' }
@@ -75,6 +80,52 @@ export default {
       return 'text-bg-light';
     }
 
+    function buildParams(page = 1) {
+      return {
+        ...(activeStatus.value !== 'all' ? { status: activeStatus.value } : {}),
+        page,
+        limit: perPage
+      };
+    }
+
+    async function fetchPage(page = 1, shouldScroll = false) {
+      currentPage.value = page;
+      error.value = '';
+
+      try {
+        await bookingStore.fetchBookings(buildParams(page));
+        if (bookingStore.error) {
+          error.value = bookingStore.error;
+        }
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        loading.value = false;
+      }
+
+      if (shouldScroll) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function setStatus(status) {
+      if (activeStatus.value === status) {
+        return;
+      }
+
+      activeStatus.value = status;
+      fetchPage(1);
+    }
+
+    function goToPage(pageNum) {
+      const totalPages = bookingStore.pagination.totalPages || 1;
+      if (pageNum < 1 || pageNum > totalPages || pageNum === bookingStore.pagination.page) {
+        return;
+      }
+
+      fetchPage(pageNum, true);
+    }
+
     async function cancelBooking(booking) {
       if (booking.status !== 'confirmed') {
         return;
@@ -83,6 +134,10 @@ export default {
       error.value = '';
       try {
         await bookingStore.cancelBooking(booking.id);
+        await fetchPage(currentPage.value);
+        if (filteredBookings.value.length === 0 && currentPage.value > 1 && bookingStore.pagination.totalItems > 0) {
+          await fetchPage(currentPage.value - 1);
+        }
       } catch (err) {
         error.value = err.message;
       } finally {
@@ -91,22 +146,16 @@ export default {
     }
 
     onMounted(async () => {
-      try {
-        await bookingStore.fetchBookings();
-      } catch (err) {
-        error.value = err.message;
-      } finally {
-        loading.value = false;
-      }
+      await fetchPage(1);
     });
 
-    return {bookingStore, loading, error, activeStatus, statusFilters, filteredBookings, summaryCards, cancellingId, bookingTotal, reservedSeatCount, seatLabel, eventRoute, statusClass, cancelBooking, formatCurrency, formatDate};
+    return {bookingStore, loading, error, activeStatus, currentPage, statusFilters, filteredBookings, summaryCards, statusResultLabel, paginationLabel, cancellingId, bookingTotal, reservedSeatCount, seatLabel, eventRoute, statusClass, setStatus, goToPage, cancelBooking, formatCurrency, formatDate};
   }
 };
 </script>
 
 <template>
-  <div class="container section-pad app-shell">
+  <div class="container section-pad history-page">
     <LoadingState v-if="loading" />
 
     <div v-else>
@@ -118,7 +167,7 @@ export default {
         </div>
 
         <div class="history-counts" aria-label="Booking history summary">
-          <span>{{ bookingStore.bookings.length }} records</span>
+          <span>{{ summaryCards[0].value }} records</span>
           <span>{{ summaryCards[1].value }} confirmed</span>
           <span>{{ summaryCards[2].value }} cancelled</span>
         </div>
@@ -133,7 +182,7 @@ export default {
         </div>
 
         <div class="history-filter-control" role="group" aria-label="Filter booking history">
-          <button v-for="filter in statusFilters" :key="filter.value" type="button" :class="['history-filter-button', { 'is-active': activeStatus === filter.value }]" :aria-pressed="activeStatus === filter.value" @click="activeStatus = filter.value">
+          <button v-for="filter in statusFilters" :key="filter.value" type="button" :class="['history-filter-button', { 'is-active': activeStatus === filter.value }]" :aria-pressed="activeStatus === filter.value" @click="setStatus(filter.value)">
             {{ filter.label }}
           </button>
         </div>
@@ -142,6 +191,8 @@ export default {
       <EmptyState v-if="filteredBookings.length === 0" title="No bookings found" message="Bookings matching this filter will appear here."/>
 
       <section v-else class="history-list" aria-label="Booking history records">
+        <p class="text-muted mb-0" aria-live="polite">{{ statusResultLabel }}</p>
+
         <article v-for="booking in filteredBookings" :key="booking.id" class="history-card">
           <img class="history-thumbnail" :src="booking.image_url" :alt="booking.title" loading="lazy"/>
 
@@ -200,6 +251,12 @@ export default {
             </div>
           </div>
         </article>
+
+        <div class="d-flex flex-column align-items-center gap-2 mt-2">
+          <p class="text-muted small mb-0" aria-live="polite">{{ paginationLabel }}</p>
+
+          <paginate v-model="currentPage" :page-count="bookingStore.pagination.totalPages" :page-range="3" :margin-pages="1" :click-handler="goToPage" :prev-text="'Previous'" :next-text="'Next'" :container-class="'pagination flex-wrap justify-content-center mb-0'" :page-class="'page-item'" :page-link-class="'page-link'" :prev-class="'page-item'" :prev-link-class="'page-link'" :next-class="'page-item'" :next-link-class="'page-link'" :break-view-class="'page-item disabled'" :break-view-link-class="'page-link'"/>
+        </div>
       </section>
     </div>
   </div>

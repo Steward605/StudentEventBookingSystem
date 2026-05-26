@@ -54,17 +54,96 @@ router.get('/me', requireAuth, (req, res) => {
 
 router.get('/all', requireAuth, requireAdmin, (req, res, next) => {
   try {
+    const allowedRoles = ['student', 'admin']
+    const allowedStatuses = ['pending', 'verified', 'rejected']
+    const role = allowedRoles.includes(req.query.role) ? req.query.role : 'all'
+    const verification = allowedStatuses.includes(req.query.verification) ? req.query.verification : 'all'
+    const search = req.query.search?.trim().toLowerCase() || ''
+    const shouldPaginate = req.query.page !== undefined || req.query.limit !== undefined
+
+    function parsePositiveInteger(value, fallback) {
+      const parsed = Number.parseInt(value, 10)
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+    }
+
+    const page = parsePositiveInteger(req.query.page, 1)
+    const limit = Math.min(parsePositiveInteger(req.query.limit, 8), 32)
+    const offset = (page - 1) * limit
+    let whereSql = 'WHERE 1 = 1'
+    const params = []
+
+    if (role !== 'all') {
+      whereSql += ' AND u.role = ?'
+      params.push(role)
+    }
+
+    if (verification !== 'all') {
+      whereSql += ' AND u.verification_status = ?'
+      params.push(verification)
+    }
+
+    if (search) {
+      whereSql += `
+        AND (
+          LOWER(u.name) LIKE ?
+          OR LOWER(u.email) LIKE ?
+          OR LOWER(u.role) LIKE ?
+          OR LOWER(u.campus) LIKE ?
+          OR LOWER(u.interests) LIKE ?
+          OR LOWER(u.verification_status) LIKE ?
+        )
+      `
+      const wildcardSearch = `%${search}%`
+      params.push(wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch, wildcardSearch)
+    }
+
+    const totalItems = db
+      .prepare(
+        `
+        SELECT COUNT(*) AS count
+        FROM users u
+        ${whereSql}
+      `
+      )
+      .get(...params).count
+
+    const paginationSql = shouldPaginate ? 'LIMIT ? OFFSET ?' : ''
+    const userParams = shouldPaginate ? [...params, limit, offset] : params
     const users = db
       .prepare(
         `
         ${adminUserSelect}
+        ${whereSql}
         ${adminUserGroupBy}
         ORDER BY datetime(u.created_at) DESC, u.name COLLATE NOCASE ASC
+        ${paginationSql}
       `
       )
-      .all()
+      .all(...userParams)
 
-    res.json({ users })
+    const summary = db
+      .prepare(
+        `
+        SELECT
+          COUNT(*) AS totalUsers,
+          COALESCE(SUM(CASE WHEN role = 'student' THEN 1 ELSE 0 END), 0) AS totalStudents,
+          COALESCE(SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END), 0) AS totalAdmins,
+          COALESCE(SUM(CASE WHEN role = 'student' AND verification_status = 'verified' THEN 1 ELSE 0 END), 0) AS verifiedStudents
+        FROM users
+      `
+      )
+      .get()
+
+    res.json({
+      users,
+      summary,
+      pagination: {
+        page,
+        limit: shouldPaginate ? limit : Math.max(users.length, 1),
+        totalItems,
+        totalPages: shouldPaginate ? Math.max(Math.ceil(totalItems / limit), 1) : 1
+      }
+    })
   } catch (error) {
     next(error)
   }

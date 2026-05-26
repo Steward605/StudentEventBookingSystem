@@ -1,5 +1,6 @@
 <script>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import Paginate from 'vuejs-paginate-next'
 import { useAuthStore } from '@/stores/authStore';
 import LoadingState from '@/components/LoadingState.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -9,10 +10,24 @@ import { formatDate } from '@/utils/formatters';
 export default {
   components: {
     LoadingState,
-    EmptyState
+    EmptyState,
+    paginate: Paginate
   },
   setup() {
     const users = ref([]);
+    const summary = ref({
+      totalUsers: 0,
+      totalStudents: 0,
+      totalAdmins: 0,
+      verifiedStudents: 0
+    });
+    const pagination = ref({
+      page: 1,
+      limit: 8,
+      totalItems: 0,
+      totalPages: 1
+    });
+    const currentPage = ref(1);
     const loading = ref(true);
     const updatingUserId = ref(null);
     const error = ref('');
@@ -24,6 +39,8 @@ export default {
     const showCreateForm = ref(false)
     const creatingUser = ref(false)
     const deletingUserId = ref(null)
+    const perPage = 8
+    let debounceTimer
     const newUser = reactive({
       name: '',
       email: '',
@@ -34,33 +51,28 @@ export default {
       verification_status: 'pending'
     })
     const summaryRows = computed(() => {
-      const totalUsers = users.value.length;
-      const totalStudents = users.value.filter(user => user.role === 'student').length;
-      const totalAdmins = users.value.filter(user => user.role === 'admin').length;
-      const verifiedStudents = users.value.filter(user => user.role === 'student' && user.verification_status === 'verified').length;
       return [
-        { label: 'All users', value: totalUsers },
-        { label: 'Students', value: totalStudents },
-        { label: 'Admins', value: totalAdmins },
-        { label: 'Verified students', value: verifiedStudents }
+        { label: 'All users', value: summary.value.totalUsers },
+        { label: 'Students', value: summary.value.totalStudents },
+        { label: 'Admins', value: summary.value.totalAdmins },
+        { label: 'Verified students', value: summary.value.verifiedStudents }
       ];
     });
-    const filteredUsers = computed(() => {
-      const search = searchText.value.trim().toLowerCase();
-      return users.value.filter(user => {
-        const matchesRole = roleFilter.value === 'all' || user.role === roleFilter.value;
-        const matchesVerification = verificationFilter.value === 'all' || user.verification_status === verificationFilter.value;
-        const searchableContent = [
-          user.name,
-          user.email,
-          user.role,
-          user.campus,
-          user.interests,
-          user.verification_status
-        ].join(' ').toLowerCase();
-        const matchesSearch = !search || searchableContent.includes(search);
-        return matchesRole && matchesVerification && matchesSearch;
-      });
+    const filteredUsers = computed(() => users.value);
+    const resultLabel = computed(() => {
+      const count = pagination.value.totalItems ?? filteredUsers.value.length;
+      return `${count} ${count === 1 ? 'user' : 'users'} shown`;
+    });
+    const paginationLabel = computed(() => {
+      const { page, limit, totalItems } = pagination.value;
+
+      if (!totalItems) {
+        return 'No users found';
+      }
+
+      const start = (page - 1) * limit + 1;
+      const end = Math.min(page * limit, totalItems);
+      return `Showing ${start}-${end} of ${totalItems} users`;
     });
 
     function roleClass(role) {
@@ -87,12 +99,40 @@ export default {
       return formatDate(dateValue);
     }
 
-    async function loadUsers() {
+    function buildParams(page = 1) {
+      return {
+        ...(searchText.value ? { search: searchText.value } : {}),
+        ...(roleFilter.value !== 'all' ? { role: roleFilter.value } : {}),
+        ...(verificationFilter.value !== 'all' ? { verification: verificationFilter.value } : {}),
+        page,
+        limit: perPage
+      }
+    }
+
+    function buildQuery(params) {
+      const query = new URLSearchParams()
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.set(key, value)
+        }
+      })
+      return query.toString() ? `?${query.toString()}` : ''
+    }
+
+    async function loadUsers(page = currentPage.value) {
+      currentPage.value = page
       loading.value = true;
       error.value = '';
       try {
-        const data = await api.get('/users/all');
+        const data = await api.get(`/users/all${buildQuery(buildParams(page))}`);
         users.value = data.users || [];
+        summary.value = data.summary || summary.value;
+        pagination.value = data.pagination || {
+          page,
+          limit: perPage,
+          totalItems: users.value.length,
+          totalPages: 1
+        };
       } catch (err) {
         error.value = err.message;
       } finally {
@@ -112,15 +152,6 @@ export default {
       })
     }
 
-    function normaliseUserCounts(user) {
-      return {
-        ...user,
-        booking_count: user.booking_count ?? 0,
-        confirmed_tickets: user.confirmed_tickets ?? 0,
-        hosted_event_count: user.hosted_event_count ?? 0
-      }
-    }
-
     async function createUser() {
       creatingUser.value = true
       error.value = ''
@@ -136,10 +167,10 @@ export default {
           verification_status: newUser.role === 'admin' ? 'verified' : newUser.verification_status
         }
         const data = await api.post('/users', payload)
-        users.value = [normaliseUserCounts(data.user), ...users.value]
         success.value = `${data.user.name} has been added.`
         showCreateForm.value = false
         resetNewUserForm()
+        await loadUsers(1)
       } catch (err) {
         error.value = err.message
       } finally {
@@ -167,8 +198,11 @@ export default {
 
       try {
         await api.delete(`/users/${user.id}`)
-        users.value = users.value.filter(currentUser => currentUser.id !== user.id)
         success.value = `${user.name} has been deleted.`
+        await loadUsers(currentPage.value)
+        if (users.value.length === 0 && currentPage.value > 1 && pagination.value.totalItems > 0) {
+          await loadUsers(currentPage.value - 1)
+        }
       } catch (err) {
         error.value = err.message
       } finally {
@@ -181,19 +215,11 @@ export default {
       error.value = '';
       success.value = '';
       try {
-        const data = await api.patch(`/users/${user.id}/verification`, {
+        await api.patch(`/users/${user.id}/verification`, {
           verification_status: verificationStatus
         });
-        users.value = users.value.map(currentUser => {
-          if (currentUser.id !== user.id) {
-            return currentUser;
-          }
-          return {
-            ...currentUser,
-            ...data.user
-          };
-        });
         success.value = `${user.name} is now marked as ${verificationStatus}.`;
+        await loadUsers(currentPage.value)
       } catch (err) {
         error.value = err.message;
       } finally {
@@ -201,9 +227,28 @@ export default {
       }
     }
 
-    onMounted(loadUsers);
+    function goToPage(pageNum) {
+      const totalPages = pagination.value.totalPages || 1;
+      if (pageNum < 1 || pageNum > totalPages || pageNum === pagination.value.page) {
+        return;
+      }
+      loadUsers(pageNum);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-    return { users, loading, updatingUserId, deletingUserId, creatingUser, error, success, searchText, roleFilter, verificationFilter, showCreateForm, newUser, summaryRows, filteredUsers, roleClass, verificationClass, formatJoinedDate, resetNewUserForm, createUser, deleteUser, updateVerification };
+    watch([searchText, roleFilter, verificationFilter], () => {
+      window.clearTimeout(debounceTimer)
+      debounceTimer = window.setTimeout(() => {
+        loadUsers(1)
+      }, 250)
+    })
+
+    onMounted(loadUsers);
+    onBeforeUnmount(() => {
+      window.clearTimeout(debounceTimer)
+    })
+
+    return { users, pagination, currentPage, resultLabel, paginationLabel, loading, updatingUserId, deletingUserId, creatingUser, error, success, searchText, roleFilter, verificationFilter, showCreateForm, newUser, summaryRows, filteredUsers, roleClass, verificationClass, formatJoinedDate, resetNewUserForm, createUser, deleteUser, updateVerification, goToPage };
   }
 };
 </script>
@@ -346,69 +391,88 @@ export default {
         </div>
 
         <EmptyState
-          v-if="filteredUsers.length === 0"
+          v-if="summaryRows[0].value === 0"
+          title="No users found"
+          message="Registered accounts will appear here after users are created."
+        />
+
+        <EmptyState
+          v-else-if="filteredUsers.length === 0"
           title="No users found"
           message="Try changing the search term, role filter, or verification filter."
         />
 
-        <div v-else class="admin-table-wrap">
-          <table class="table admin-users-table mb-0">
-            <thead>
-              <tr>
-                <th scope="col" class="users-col-user">User</th>
-                <th scope="col" class="users-col-role">Role</th>
-                <th scope="col" class="users-col-status">Status</th>
-                <th scope="col" class="users-col-campus">Campus</th>
-                <th scope="col" class="users-col-number">Bookings</th>
-                <th scope="col" class="users-col-number">Hosted</th>
-                <th scope="col" class="users-col-date">Registered</th>
-                <th scope="col" class="users-col-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="user in filteredUsers" :key="user.id">
-                <td class="users-col-user">
-                  <div class="admin-user-name">{{ user.name }}</div>
-                  <div class="admin-user-email">{{ user.email }}</div>
-                </td>
-                <td class="users-col-role">
-                  <span :class="['seat-status', roleClass(user.role)]">
-                    {{ user.role }}
-                  </span>
-                </td>
-                <td class="users-col-status">
-                  <span :class="['seat-status', verificationClass(user.verification_status)]">
-                    {{ user.verification_status }}
-                  </span>
-                </td>
-                <td class="users-col-campus">
-                  {{ user.campus || 'Not set' }}
-                </td>
-                <td class="users-col-number">
-                  {{ user.booking_count }}
-                </td>
-                <td class="users-col-number">
-                  {{ user.hosted_event_count || 0 }}
-                </td>
-                <td class="users-col-date">
-                  {{ formatJoinedDate(user.created_at) }}
-                </td>
-                <td class="users-col-actions">
-                  <div class="admin-user-actions">
-                    <select v-if="user.role === 'student'" class="form-select form-select-sm admin-status-select" :value="user.verification_status" :disabled="updatingUserId === user.id" @change="updateVerification(user, $event.target.value)">
-                      <option value="pending">Pending</option>
-                      <option value="verified">Verified</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                    <span v-else class="admin-role-note">Admin</span>
-                    <button class="btn btn-outline-danger btn-sm admin-delete-user-btn" type="button" :disabled="deletingUserId === user.id" @click="deleteUser(user)">
-                      {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else>
+          <div class="admin-results-heading mb-3">
+            <h3 class="h5 fw-bold mb-0">User records</h3>
+            <p class="text-muted mb-0">{{ resultLabel }}</p>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="table admin-users-table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col" class="users-col-user">User</th>
+                  <th scope="col" class="users-col-role">Role</th>
+                  <th scope="col" class="users-col-status">Status</th>
+                  <th scope="col" class="users-col-campus">Campus</th>
+                  <th scope="col" class="users-col-number">Bookings</th>
+                  <th scope="col" class="users-col-number">Hosted</th>
+                  <th scope="col" class="users-col-date">Registered</th>
+                  <th scope="col" class="users-col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in filteredUsers" :key="user.id">
+                  <td class="users-col-user">
+                    <div class="admin-user-name">{{ user.name }}</div>
+                    <div class="admin-user-email">{{ user.email }}</div>
+                  </td>
+                  <td class="users-col-role">
+                    <span :class="['seat-status', roleClass(user.role)]">
+                      {{ user.role }}
+                    </span>
+                  </td>
+                  <td class="users-col-status">
+                    <span :class="['seat-status', verificationClass(user.verification_status)]">
+                      {{ user.verification_status }}
+                    </span>
+                  </td>
+                  <td class="users-col-campus">
+                    {{ user.campus || 'Not set' }}
+                  </td>
+                  <td class="users-col-number">
+                    {{ user.booking_count }}
+                  </td>
+                  <td class="users-col-number">
+                    {{ user.hosted_event_count || 0 }}
+                  </td>
+                  <td class="users-col-date">
+                    {{ formatJoinedDate(user.created_at) }}
+                  </td>
+                  <td class="users-col-actions">
+                    <div class="admin-user-actions">
+                      <select v-if="user.role === 'student'" class="form-select form-select-sm admin-status-select" :value="user.verification_status" :disabled="updatingUserId === user.id" @change="updateVerification(user, $event.target.value)">
+                        <option value="pending">Pending</option>
+                        <option value="verified">Verified</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                      <span v-else class="admin-role-note">Admin</span>
+                      <button class="btn btn-outline-danger btn-sm admin-delete-user-btn" type="button" :disabled="deletingUserId === user.id" @click="deleteUser(user)">
+                        {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex flex-column align-items-center gap-2 mt-4">
+            <p class="text-muted small mb-0" aria-live="polite">{{ paginationLabel }}</p>
+
+            <paginate v-model="currentPage" :page-count="pagination.totalPages" :page-range="3" :margin-pages="1" :click-handler="goToPage" :prev-text="'Previous'" :next-text="'Next'" :container-class="'pagination flex-wrap justify-content-center mb-0'" :page-class="'page-item'" :page-link-class="'page-link'" :prev-class="'page-item'" :prev-link-class="'page-link'" :next-class="'page-item'" :next-link-class="'page-link'" :break-view-class="'page-item disabled'" :break-view-link-class="'page-link'"/>
+          </div>
         </div>
       </section>
     </div>
