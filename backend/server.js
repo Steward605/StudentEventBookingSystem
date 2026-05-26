@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -13,13 +15,16 @@ import myEventRoutes from './src/routes/myEvents.js';
 import { initialiseDatabase } from './src/db/database.js';
 import { notFound, errorHandler } from './src/middleware/errorHandler.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const publicDir = path.join(__dirname, 'public');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 initialiseDatabase();
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173,http://localhost,capacitor://localhost').split(',').map(origin => origin.trim()).filter(Boolean);
-initialiseDatabase();
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -30,6 +35,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
+app.use('/assets', express.static(publicDir));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Student Event Booking System API' });
 });
