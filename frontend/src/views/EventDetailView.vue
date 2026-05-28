@@ -82,7 +82,7 @@ export default {
 
       try {
         weather.value = await api.get(`/external/weather?city=${encodeURIComponent(city)}`);
-      } catch (err) {
+      } catch {
         weatherError.value = 'Weather information is currently unavailable.';
       } finally {
         weatherLoading.value = false;

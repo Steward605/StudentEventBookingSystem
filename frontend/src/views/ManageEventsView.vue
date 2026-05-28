@@ -235,7 +235,7 @@ export default {
             </button>
           </div>
         </article>
-        <div v-if="eventStore.pagination?.totalPages > 1" class="d-flex justify-content-center mt-4">
+        <div class="d-flex justify-content-center mt-4">
           <paginate v-model="currentPage" :page-count="eventStore.pagination.totalPages" :page-range="3" :margin-pages="1" :click-handler="goToPage" :prev-text="'Previous'" :next-text="'Next'" :container-class="'pagination flex-wrap justify-content-center mb-0'" :page-class="'page-item'" :page-link-class="'page-link'" :prev-class="'page-item'" :prev-link-class="'page-link'" :next-class="'page-item'" :next-link-class="'page-link'" :break-view-class="'page-item disabled'" :break-view-link-class="'page-link'"/>
         </div>
       </section>
