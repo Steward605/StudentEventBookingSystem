@@ -11,7 +11,7 @@ Node.js 18 or newer is recommended because the backend external weather route us
 
 ### Installation and setup
 
-From the project root folder:
+From the project root folder (StudentEventBookingSystem/):
 
 ```bash
 npm install
